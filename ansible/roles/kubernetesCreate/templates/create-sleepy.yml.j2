@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ appKubeCreateName }}
+spec:
+  parallelism: 2
+  completions: 6
+  activeDeadlineSeconds: 15
+  template:
+    spec:
+      containers:
+      - name: resting
+        image: {{ appKubeCreateImage }}
+        command: ["/bin/sleep"]
+        args: ["5"]
+      restartPolicy: Never
+

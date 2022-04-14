@@ -1,0 +1,163 @@
+#
+#BOF
+---
+- hosts: all
+  connection: ssh
+  become: false
+  gather_facts: false
+  vars:
+    #
+    kubeControlPlaneDnsAlias: k8scp
+    kubeControlPlanePortNum: 6443
+    kubeInstallVersion: 1.23.1
+  #
+  pre_tasks:
+    #
+    - name: Check SSH known_hosts for {{ inventory_hostname }}
+      delegate_to: localhost
+      ansible.builtin.command:
+        # ssh-keygen
+        # -F | Search for the specified hostname in a known_hosts file, listing any occurrences found. 
+        #      This option is useful to find hashed host names or addresses and may also be used in 
+        #      conjunction with the -H option to print found keys in a hashed format.
+        cmd: ssh-keygen -F {{ inventory_hostname }}
+      #
+      register: sshKnownHostsCheck
+      failed_when: sshKnownHostsCheck.rc != 0
+      ignore_errors: true
+      when:
+        - provisionerSource != "vagrant"
+    #
+    - name: Remove SSH known_hosts for {{ inventory_hostname }}
+      delegate_to: localhost
+      ansible.builtin.command:
+        # ssh-keygen
+        # -R | Search for the specified hostname in a known_hosts file, removing any occurrences found. 
+        cmd: ssh-keygen -R {{ inventory_hostname }}
+      #
+      when: 
+        - provisionerSource != "vagrant"
+        - sshKnownHostsCheck.rc == 0
+    
+    # 
+    - name: Add {{ inventory_hostname }} to SSH known hosts automatically
+      delegate_to: localhost
+      ansible.builtin.shell:
+        # ssh-keyscan
+        # -t | Type of the key to fetch from the scanned hosts (e.g ed25519)
+        # -H | Hash all host names and addresses in the output.
+        cmd: ssh-keyscan -H {{ inventory_hostname }} >> $HOME/.ssh/known_hosts 
+      #
+      retries: 6
+      delay: 30
+      register: sshKnownHostsAdd
+      until: sshKnownHostsAdd.rc == 0
+      when: 
+        - provisionerSource != "vagrant"
+    # 
+    - name: Gathering facts
+      ansible.builtin.setup: 
+        gather_subset: all
+      become: true
+    #
+    - name: Log gathered facts
+      ansible.builtin.debug: 
+        var: ansible_facts
+        verbosity: 3
+  #
+  roles:
+    # 
+    - role: 
+        installDocker
+      become: true
+    # 
+    - role: 
+        installKubernetes
+      become: true
+    # 
+    - role: 
+        installHelm
+      when:
+        - computeNodeType == "controlPlane"
+      become: true
+    # 
+    - role: 
+        setupKubernetesControlPlane
+      when:
+        - computeNodeType == "controlPlane"
+      become: true
+    # 
+    - role: 
+        setupKubernetesWorker
+      when:
+        - computeNodeType == "worker"
+      become: true
+    #
+    - role:
+        setupNetworkFileSystemServer
+      when:
+        - computeNodeType == "controlPlane"
+      become: true
+    #
+    - role:
+        setupNetworkFileSystemClient
+      when:
+        - computeNodeType != "controlPlane"
+      become: true
+    # 
+    - role: 
+        configureKubernetes
+      when:
+        - computeNodeType == "controlPlane"
+      become: false
+    #
+    - role: 
+        kubernetesCreate
+      when:
+        - computeNodeType == "controlPlane"
+      become: false
+    #
+    - role: 
+        helmChart
+      when:
+        - computeNodeType == "controlPlane"
+      become: false
+  #
+  post_tasks:
+    #
+    - name: Validate Kubernetes Nodes
+      ansible.builtin.command:
+        cmd: kubectl get nodes
+      #
+      register: kubectlNodeCheck
+      when:
+        - computeNodeType == "controlPlane"
+    # 
+    - name: Log Kubernetes Nodes
+      ansible.builtin.debug: 
+        var: kubectlNodeCheck.stdout_lines
+        verbosity: 4
+      #
+      when:
+        - computeNodeType == "controlPlane"
+    #
+    - name: Validate Kubernetes Control Plane
+      ansible.builtin.shell:
+        # kubectl get nodes | grep control-plane | grep -Eo '^([^ ]*)'
+        cmd: "kubectl describe node"
+      #
+      register: kubectlControlPlaneNodeCheck
+      when:
+        - computeNodeType == "controlPlane"
+    # 
+    - name: Log Kubernetes Control Plane
+      ansible.builtin.debug: 
+        var: kubectlControlPlaneNodeCheck.stdout_lines
+        verbosity: 4
+      #
+      when:
+        - computeNodeType == "controlPlane"
+    #
+
+...
+#EOF

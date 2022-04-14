@@ -1,0 +1,6 @@
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+kubernetesVersion: {{ kubeInstallVersion }}  #<-- Use the word stable for newest version
+controlPlaneEndpoint: "{{ kubeControlPlaneDnsAlias }}:{{ kubeControlPlanePortNum }}" #<-- Use the node alias not the IP
+networking:
+  podSubnet: {{ CALICO_IPV4POOL_CIDR }} #<-- Match the IP range from the Calico config file

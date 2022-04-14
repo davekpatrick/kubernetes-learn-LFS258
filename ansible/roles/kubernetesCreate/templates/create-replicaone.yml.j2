@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: {{ appKubeCreateKind }}
+metadata:
+  name: {{ appKubeCreateName }}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      system: {{ appKubeCreateName }}
+  template:
+    metadata:
+      labels:
+        system: {{ appKubeCreateName }}
+    spec:
+      containers:
+      - name: nginx
+        image: {{ appKubeCreateImage }}
+        ports:
+        - containerPort: {{ appKubeCreateContainerPort }}

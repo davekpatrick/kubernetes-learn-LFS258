@@ -1,0 +1,176 @@
+#
+#BOF
+---
+# Allow the cp server to run non-infrastructure pods.
+- name: Check for kubernetes taint
+  ansible.builtin.shell:
+    # NOTE: A folding block operator joins multiple lines together by spaces
+    cmd: >
+      kubectl describe node 
+      | grep -i taint 
+      | grep -v '<none>'
+  #
+  register: kubeTaintCheck
+  ignore_errors: true
+#
+- name: Log kubernetes taint
+  ansible.builtin.debug: 
+    var: kubeTaintCheck
+# Allow the cp server to run non-infrastructure pods.
+- name: Remove kubernetes taint
+  ansible.builtin.shell:
+    cmd: "kubectl taint nodes --all node-role.kubernetes.io/master-"
+  #
+  register: kubeTaint
+  when:
+    - kubeTaintCheck.rc == 0
+  #failed_when: kubeTaint.rc != 0
+  ignore_errors: true
+# kubectl get pods --all-namespaces
+# kubectl -n kube-system delete pod coredns-*
+#
+- name: Get a list of kubernetes worker nodes
+  ansible.builtin.shell:
+    # NOTE: A folding block operator joins multiple lines together by spaces
+    cmd: >
+      kubectl get nodes 
+      | grep '<none>' 
+      | grep -Eo '^([^ ]+)'
+  #
+  register: taskResponse
+  ignore_errors: true
+# 
+- name: Set Kubernetes node role
+  ansible.builtin.command:
+    #cmd: "kubectl label nodes $HOSTNAME kubernetes.io/role=worker"
+    cmd: "kubectl label node {{ item }} kubernetes.io/role=worker"
+  #
+  with_items: "{{ taskResponse.stdout_lines }}"
+  when:
+    - taskResponse.rc == 0
+# 
+- name: Set Kubernetes node label
+  ansible.builtin.command:
+  
+    #cmd: " kubectl label node $HOSTNAME system=secondOne"
+    cmd: "kubectl label node {{ item }} system=secondOne"
+  #
+  with_items: "{{ taskResponse.stdout_lines | first }}"
+  when:
+    - taskResponse.rc == 0
+# 
+- name: Get kubernetes namespace 
+  ansible.builtin.command:
+  # NOTE: A folding block operator joins multiple lines together by spaces
+    #cmd: "kubectl label nodes $HOSTNAME kubernetes.io/role=worker"
+    cmd: "kubectl get namespace {{ limitRange_namespace }}"
+  #
+  register: taskResponse
+  ignore_errors: true
+#
+# 
+- name: Create kubernetes namespace 
+  ansible.builtin.command:
+  # NOTE: A folding block operator joins multiple lines together by spaces
+    #cmd: "kubectl label nodes $HOSTNAME kubernetes.io/role=worker"
+    cmd: "kubectl create namespace {{ limitRange_namespace }}"
+  #
+  when:
+    - taskResponse.rc != 0
+#
+- name: Create kubernetes LimitRange configuration file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( limitRange_configFile ) }}"
+    dest: "{{ '~/%s' | format( limitRange_configFile ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0644
+# 
+- name: Apply kubernetes LimitRange configuration file
+  ansible.builtin.command:
+    cmd: "kubectl --namespace={{ limitRange_namespace }} create -f {{ limitRange_configFile }}" 
+  #
+  ignore_errors: true
+# 
+- name: Get kubernetes namespace 
+  ansible.builtin.command:
+    cmd: "kubectl get namespace {{ resourceQuota_namespace }}"
+  #
+  register: taskResponse
+  ignore_errors: true
+#
+- name: Create kubernetes namespace 
+  ansible.builtin.command:
+    cmd: "kubectl create namespace {{ resourceQuota_namespace }}"
+  #
+  when:
+    - taskResponse.rc != 0
+#
+- name: Create kubernetes PersistentVolume configuration file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( persistentVolume_configFile ) }}"
+    dest: "{{ '~/%s' | format( persistentVolume_configFile ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0644
+# 
+- name: Apply kubernetes PersistentVolume configuration file
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ resourceQuota_namespace }} create -f {{ persistentVolume_configFile }}" 
+  #
+  ignore_errors: true
+# 
+- name: Get kubernetes PersistentVolume 
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ resourceQuota_namespace }} get persistentvolumes" 
+  #
+  register: taskResponse
+#
+- name: Log kubernetes PersistentVolume 
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+- name: Create kubernetes PersistentVolumeClaim configuration file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( persistentVolumeClaim_configFile ) }}"
+    dest: "{{ '~/%s' | format( persistentVolumeClaim_configFile ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0644
+# 
+- name: Apply kubernetes PersistentVolumeClaim configuration file
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ resourceQuota_namespace }} create -f {{ persistentVolumeClaim_configFile }}" 
+  #
+  ignore_errors: true
+#
+- name: Create kubernetes resourceQuota configuration file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( resourceQuota_configFile ) }}"
+    dest: "{{ '~/%s' | format( resourceQuota_configFile ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0644
+#
+- name: Apply kubernetes PersistentVolumeClaim configuration file
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ resourceQuota_namespace }} create -f {{ resourceQuota_configFile }}" 
+  #
+  ignore_errors: true
+# 
+- name: Get kubernetes {{ accounting_namespace }} namespace 
+  ansible.builtin.command:
+    cmd: "kubectl get namespace {{ accounting_namespace }}"
+  #
+  register: taskResponse
+  ignore_errors: true
+#
+- name: Create kubernetes {{ accounting_namespace }} namespace 
+  ansible.builtin.command:
+    cmd: "kubectl create namespace {{ accounting_namespace }}"
+  #
+  when:
+    - taskResponse.rc != 0
+
+
+
+
+#
+...
+#EOF

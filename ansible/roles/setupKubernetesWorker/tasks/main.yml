@@ -1,0 +1,49 @@
+#BOF
+---
+#
+- name: Retrieve Kubernetes Control Plane configuration
+  ansible.builtin.set_fact: 
+    kubeControlPlaneIpAddress: "{{ item.value.kubeControlPlaneIpAddress }}"
+    kubeControlPlaneJoinToken: "{{ item.value.kubeControlPlaneJoinToken }}"
+    kubeControlPlaneDiscoveryTokenCaCertHash: "{{ item.value['kubeControlPlaneDiscoveryTokenCaCertHash'] }}"
+  when:
+    - item.value.computeNodeType == 'controlPlane'
+  with_dict: "{{ hostvars }}"
+  no_log: true
+#
+- name: Add an local DNS alias for our cp server
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "{{ '^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\s%s\\s' | format( kubeControlPlaneDnsAlias ) }}"
+    line: "{{ kubeControlPlaneIpAddress }} {{ kubeControlPlaneDnsAlias }} # Ansible managed record"
+    #
+    backup: yes
+    state: present
+#
+- name: Join the Kubernetes cluster check
+  ansible.builtin.stat: 
+    path: /root/kubeadm-join.out
+  register: kubeadmJoinCheck
+#
+- name: Join the Kubernetes cluster
+  ansible.builtin.shell:
+  # NOTE: A folding block operator joins multiple lines together by spaces
+    cmd: >
+      kubeadm join --token {{ kubeControlPlaneJoinToken }}
+      {{ kubeControlPlaneDnsAlias }}:{{ kubeControlPlanePortNum }}
+      --discovery-token-ca-cert-hash sha256:{{ kubeControlPlaneDiscoveryTokenCaCertHash }} 
+      | tee kubeadm-join.out
+    chdir: /root
+  when: 
+    - kubeadmJoinCheck.stat.exists == false
+  #
+  register: kubeadmJoin
+#
+- name: Log kubeadm Join 
+  ansible.builtin.debug: 
+    var: kubeadmJoin.stdout_lines
+  when: 
+    - kubeadmJoinCheck.stat.exists == false
+#
+...
+#EOD

@@ -1,0 +1,282 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# Lab 3 nginx
+#######################################################################################################################
+- name: Kubernetes Create[{{ nginx_kubeCreateName }}]
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ nginx_kubeCreateName }}"
+        - appKubeCreateKind: "{{ nginx_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ nginx_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( nginx_kubeCreateName ) }}"
+        - appKubeCreateExpose: true
+        - appKubeCreateVarsCheck: true
+#######################################################################################################################
+# Playing with httpd
+#######################################################################################################################
+- name: Kubernetes Create[{{ httpd_kubeCreateName }}]
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ httpd_kubeCreateName }}"
+        - appKubeCreateKind: "{{ httpd_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ httpd_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( httpd_kubeCreateName ) }}"
+        - appKubeCreateContainerPort: "{{ httpd_kubeCreateContainerPort }}"
+        - appKubeCreateExpose: false
+#######################################################################################################################
+# LAB 4.2
+#######################################################################################################################
+- name: Kubernetes Create[{{ hog_kubeCreateName }}]
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ hog_kubeCreateName }}"
+        - appKubeCreateKind: "{{ hog_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ hog_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( hog_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: "Kubernetes Create[{{ sleepy_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ sleepy_kubeCreateName }}"
+        - appKubeCreateKind: "{{ sleepy_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ sleepy_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( sleepy_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: "Kubernetes Create[{{ sleepyCron_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ sleepyCron_kubeCreateName }}"
+        - appKubeCreateKind: "{{ sleepyCron_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ sleepyCron_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( sleepyCron_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: "Kubernetes Create[{{ rsOne_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ rsOne_kubeCreateName }}"
+        - appKubeCreateKind: "{{ rsOne_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ rsOne_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( rsOne_kubeCreateName ) }}"
+        - appKubeCreateContainerPort: "{{ rsOne_kubeCreateContainerPort }}"
+        - appKubeCreateExpose: false
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: "Kubernetes Create[{{ dsOne_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ dsOne_kubeCreateName }}"
+        - appKubeCreateKind: "{{ dsOne_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ dsOne_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( dsOne_kubeCreateName ) }}"
+        - appKubeCreateContainerPort: "{{ dsOne_kubeCreateContainerPort }}"
+        - appKubeCreateExpose: false
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: "Kubernetes Create[{{ dsTwo_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ dsTwo_kubeCreateName }}"
+        - appKubeCreateKind: "{{ dsTwo_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ dsTwo_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( dsTwo_kubeCreateName ) }}"
+        - appKubeCreateContainerPort: "{{ dsTwo_kubeCreateContainerPort }}"
+        - appKubeCreateExpose: false
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: Create configmap {{ spShell_kubeCreateConfigMap }} directories
+  ansible.builtin.shell:
+    # NOTE: A folding block operator joins multiple lines together by spaces
+    cmd: >
+      mkdir primary |
+      echo c > primary/cyan |
+      echo m > primary/magenta |
+      echo y > primary/yellow |
+      echo k > primary/black |
+      echo "known as key" >> primary/black |
+      echo blue > favorite
+# 
+- name: Get configmap {{ spShell_kubeCreateConfigMap }}
+  ansible.builtin.command:
+    cmd: 
+      kubectl get configmap {{ spShell_kubeCreateConfigMap }}
+  #
+  register: taskResponse
+  ignore_errors: true
+#
+- name: Create configmap {{ spShell_kubeCreateConfigMap }}
+  ansible.builtin.command:
+    # NOTE: A folding block operator joins multiple lines together by spaces
+    cmd: >
+      kubectl create configmap {{ spShell_kubeCreateConfigMap }}
+      --from-literal=text=black
+      --from-file=./favorite
+      --from-file=./primary/
+  #
+  when:
+    -  taskResponse.rc != 0
+#
+- name: "Kubernetes Create[{{ spShell_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ spShell_kubeCreateName }}"
+        - appKubeCreateKind: "{{ spShell_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ spShell_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( spShell_kubeCreateName ) }}"
+        - appKubeCreateVarsCheck: true
+#
+- name: Read favorite colour 
+  ansible.builtin.shell:
+    cmd: 
+      "kubectl exec {{ spShell_kubeCreateName }} -- /bin/bash -c 'echo $ilike'"
+  #
+  register: taskResponse
+#
+- name: Log favorite configmap {{ spShell_kubeCreateConfigMap }} 
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+  #
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: Create kubernetes configmap file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( 'configMap-car.yml' ) }}"
+    dest: "{{ '~/%s' | format( 'configMap-car.yml' ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0644
+#
+- name: Get configmap {{ cars_kubeCreateConfigMap }}
+  ansible.builtin.command:
+    cmd: 
+      kubectl get configmap {{ cars_kubeCreateConfigMap }}
+  #
+  register: taskResponse
+  ignore_errors: true
+#
+- name: Create configmap {{ cars_kubeCreateConfigMap }}
+  ansible.builtin.command:
+    cmd:
+      kubectl create -f ~/configMap-car.yml
+  #
+  when:
+    -  taskResponse.rc != 0
+#
+- name: "Kubernetes Create[{{ cars_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ cars_kubeCreateName }}"
+        - appKubeCreateKind: "{{ cars_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ cars_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( cars_kubeCreateName ) }}"
+        - appKubeCreateVarsCheck: true
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: "Kubernetes Create[{{ nginxNfs_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ nginxNfs_kubeCreateName }}"
+        - appKubeCreateNamespace: "{{ nginxNfs_kubeCreateNamespace }}"
+        - appKubeCreateKind: "{{ nginxNfs_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ nginxNfs_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( nginxNfs_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: "Kubernetes Create[{{ nginxOne_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ nginxOne_kubeCreateName }}"
+        - appKubeCreateNamespace: "{{ nginxOne_kubeCreateNamespace }}"
+        - appKubeCreateKind: "{{ nginxOne_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ nginxOne_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( nginxOne_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+#
+- name: Get expose NodePort {{ nginxOne_kubeCreateName }}
+  ansible.builtin.command:
+    cmd: 
+      kubectl -n accounting get service {{ nginxOne_kubeCreateNodePortName }}
+  #
+  register: taskResponse
+  ignore_errors: true
+#
+- name: Create expose NodePort service {{ nginxOne_kubeCreateName }}
+  ansible.builtin.command:
+    cmd:
+      kubectl -n accounting expose deployment {{ nginxOne_kubeCreateName }} --type=NodePort --name={{ nginxOne_kubeCreateNodePortName }}
+  #
+  when:
+    -  taskResponse.rc != 0
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: "Kubernetes Create [{{ nettool_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ nettool_kubeCreateName }}"
+        - appKubeCreateKind: "{{ nettool_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ nettool_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( nettool_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: true
+#
+- name: Update packages [{{ nettool_kubeCreateName }}]
+  ansible.builtin.shell:
+    cmd: 
+      kubectl exec -it {{ nettool_kubeCreateName }} -- apt-get update
+#
+- name: Install packages timezone data [{{ nettool_kubeCreateName }}]
+  ansible.builtin.shell:
+    cmd: 
+      kubectl exec -it {{ nettool_kubeCreateName }} -- env DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y tzdata
+#
+- name: "Install packages"
+  ansible.builtin.shell:
+    cmd: 
+      kubectl exec -it {{ nettool_kubeCreateName }} -- apt-get install -y {{ item }}
+  with_items: "{{ nettool_kubeCreatePackages }}"
+...
+#EOF

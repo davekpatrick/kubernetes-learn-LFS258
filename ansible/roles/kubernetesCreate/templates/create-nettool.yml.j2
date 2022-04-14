@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: {{ appKubeCreateKind }}
+metadata:
+  name: {{ appKubeCreateName }}
+spec:
+  containers:
+  - name: ubuntu
+    image: {{ appKubeCreateImage }}
+    command: [ "sleep" ]
+    args: [ "infinity" ]
+
