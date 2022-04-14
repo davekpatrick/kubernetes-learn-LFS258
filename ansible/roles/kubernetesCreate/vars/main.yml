@@ -1,0 +1,104 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# 
+#######################################################################################################################
+nginx_kubeCreateName: nginx
+nginx_kubeCreateKind: Deployment
+nginx_kubeCreateImage: nginx:latest
+#######################################################################################################################
+# 
+#######################################################################################################################
+httpd_kubeCreateName: httpd
+httpd_kubeCreateKind: Deployment
+httpd_kubeCreateImage: httpd:latest
+httpd_kubeCreateContainerPort: 80
+#######################################################################################################################
+# 
+#######################################################################################################################
+hog_kubeCreateName: hog
+hog_kubeCreateKind: Deployment
+hog_kubeCreateImage: vish/stress:latest
+#######################################################################################################################
+# 
+#######################################################################################################################
+sleepy_kubeCreateName: sleepy
+sleepy_kubeCreateKind: jobs.batch
+sleepy_kubeCreateImage: busybox:latest
+#######################################################################################################################
+# 
+#######################################################################################################################
+sleepyCron_kubeCreateName: sleepycron
+sleepyCron_kubeCreateKind: cronjobs.batch
+sleepyCron_kubeCreateImage: busybox:latest
+#######################################################################################################################
+# 
+#######################################################################################################################
+rsOne_kubeCreateName: replicaone
+rsOne_kubeCreateKind: ReplicaSet
+rsOne_kubeCreateImage: nginx:1.15.1
+rsOne_kubeCreateContainerPort: 80
+#######################################################################################################################
+# 
+#######################################################################################################################
+dsOne_kubeCreateName: daemonsetone
+dsOne_kubeCreateKind: DaemonSet
+dsOne_kubeCreateImage: nginx:1.11.1
+dsOne_kubeCreateContainerPort: 80
+#######################################################################################################################
+# 
+#######################################################################################################################
+dsTwo_kubeCreateName: daemonsettwo
+dsTwo_kubeCreateKind: DaemonSet
+dsTwo_kubeCreateImage: nginx:1.11.1
+dsTwo_kubeCreateContainerPort: 80
+#######################################################################################################################
+# 
+#######################################################################################################################
+spShell_kubeCreateName: shell-demo
+spShell_kubeCreateKind: Pod
+spShell_kubeCreateImage: nginx:latest
+spShell_kubeCreateConfigMap: colours
+spShell_kubeCreateVariableName: ilike
+#######################################################################################################################
+# 
+#######################################################################################################################
+cars_kubeCreateName: cars
+cars_kubeCreateKind: Pod
+cars_kubeCreateImage: nginx:latest
+cars_kubeCreateConfigMap: crap-cars
+cars_kubeCreateVolumeName: car-vol
+#######################################################################################################################
+# 
+#######################################################################################################################
+nginxNfs_kubeCreateName: nginx-nfs
+nginxNfs_kubeCreateKind: Deployment
+nginxNfs_kubeCreateNamespace: small
+nginxNfs_kubeCreateImage: nginx:latest
+nginxNfs_kubeCreateVolumeName: nfs-vol
+nginxNfs_kubeCreateMountPath: /opt
+nginxNfs_kubeCreatePersistentVolumeClaimName: pvc-one
+#######################################################################################################################
+# 
+#######################################################################################################################
+nginxOne_kubeCreateName: nginx-one
+nginxOne_kubeCreateKind: Deployment
+nginxOne_kubeCreateNamespace: accounting
+nginxOne_kubeCreateImage: nginx:1.20.1
+nginxOne_kubeCreateContainerPort: 80
+nginxOne_kubeCreateNodePortName: service-lab
+#######################################################################################################################
+# 
+#######################################################################################################################
+nettool_kubeCreateName: nettool
+nettool_kubeCreateKind: Pod
+nettool_kubeCreateImage: ubuntu:latest
+nettool_kubeCreatePackages:
+  - curl
+  - tzdata
+  - dnsutils
+#
+...
+#EOF

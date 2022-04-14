@@ -1,0 +1,74 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# Software package installs
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/package_module.html
+#######################################################################################################################
+- name: Update package repository and cache 
+  ansible.builtin.apt: 
+    update_cache: yes 
+    force_apt_get: yes 
+    cache_valid_time: 3600
+#
+- name: Upgrade all packages
+  ansible.builtin.apt: 
+    upgrade: dist 
+    force_apt_get: yes
+#
+- name: Check if a reboot is required
+  ansible.builtin.stat: 
+    path: /var/run/reboot-required 
+    get_checksum: no
+  register: systemRebootRequired
+#
+- name: Reboot required after kernel update
+  ansible.builtin.reboot:
+    msg: "Reboot initiated by Ansible for kernel updates"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: uptime
+  when: systemRebootRequired.stat.exists
+#
+- name: Install dependencies
+  ansible.builtin.package:
+    name: "{{ item }}"
+    #
+    state: present
+  with_items: "{{ installDependencies }}"
+#
+- name: Add kubernetes package repository key
+  ansible.builtin.apt_key:
+    url: "{{ kubeRepositoryKeyUrl }}"
+    state: present
+#
+- name: Add kubernetes package repository source
+  ansible.builtin.apt_repository:
+    repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+    state: present
+#
+- name: Update kubernetes package repository and cache 
+  ansible.builtin.apt: 
+    update_cache: yes 
+    force_apt_get: yes 
+    cache_valid_time: 3600
+#
+- name: Install kubernetes packages
+  ansible.builtin.apt: 
+    name: "{{ '%s=%s-00' | format( item, kubeInstallVersion ) }}"
+    allow_downgrade: yes
+    #
+    state: present
+  with_items: "{{ installPackages }}"
+#
+- name: Hold kubernetes packages
+  ansible.builtin.dpkg_selections:
+    name: kubeadm
+    selection: hold
+  with_items: "{{ installPackages }}"
+
+...
+#EOF

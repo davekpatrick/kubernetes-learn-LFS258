@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: {{ appKubeCreateKind }}
+metadata:
+  name: {{ appKubeCreateName }}
+spec:
+  containers:
+  - name: nginx
+    image: {{ appKubeCreateImage }}
+#    env:
+#    - name: {{ spShell_kubeCreateVariableName }}
+#      valueFrom:
+#        configMapKeyRef:
+#          name: {{ spShell_kubeCreateConfigMap }}
+#          key: favorite
+    envFrom:
+    - configMapRef:
+        name: {{ spShell_kubeCreateConfigMap }}

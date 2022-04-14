@@ -1,0 +1,42 @@
+# Determines YAML versioned schema.
+apiVersion: apps/v1
+# Describes the resource defined in this file.
+kind: {{ appKubeCreateKind }}
+# Required string which defines object within namespace.
+metadata:
+  name: {{ appKubeCreateName }}
+  labels:
+    system: secondary
+# Existing namespace resource will be deployed into.
+  namespace: accounting
+# Declaration of the label for the deployment to manage
+spec:
+  selector:
+    matchLabels:
+      system: secondary
+# How many Pods of following containers to deploy
+  replicas: 2
+# Some string meaningful to users, not cluster. Keys
+# must be unique for each object. Allows for mapping
+# to customer needs.
+  template:
+    metadata:
+      labels:
+        system: secondary
+# Array of objects describing containerized application with a Pod.
+# Referenced with shorthand spec.template.spec.containers
+    spec:
+      containers:
+# The Docker image to deploy
+      - image: {{ appKubeCreateImage }}
+# Unique name for each container, use local or Docker repo image
+        imagePullPolicy: Always
+        name: nginx
+# Optional resources this container may need to function.
+        ports:
+        - containerPort: {{ nginxOne_kubeCreateContainerPort }}
+          protocol: TCP
+# One method of node affinity. 
+      nodeSelector:
+        system: secondOne
+

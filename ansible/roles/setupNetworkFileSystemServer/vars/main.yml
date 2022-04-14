@@ -1,0 +1,23 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# 
+#######################################################################################################################
+#
+installDependencies:
+  - ca-certificates
+#
+installPackages:
+  - nfs-kernel-server
+#
+nfsDirName: /opt/sfw
+nfsDirPermissions: 1777
+nfsExportsConfigFile: /etc/exports
+nfsExportRightsConfig: '*(rw,sync,no_root_squash,subtree_check)'
+nfsTestFileName: hellowWorld.txt
+nfsTestFileContent: Hello World 
+#
+...
+#EOF

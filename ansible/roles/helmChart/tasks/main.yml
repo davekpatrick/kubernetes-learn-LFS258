@@ -1,0 +1,35 @@
+#
+# 
+#BOF
+---
+#######################################################################################################################
+# 
+#######################################################################################################################
+#
+- name: Add helm repo
+  ansible.builtin.shell:
+    cmd: 
+      "helm repo add {{ item.key }} {{ item.value['repoUrl'] }}"
+  with_dict:
+    - "{{ helmRepoSetup }}"
+#
+- name: Update helm repo
+  ansible.builtin.shell:
+    cmd: 
+      helm repo update
+#
+- name: helm install
+  ansible.builtin.shell:
+    cmd:
+      helm upgrade --install {{ item.key }} {{ item.value['chart'] }} --debug
+  #
+  register: taskResponse
+  with_dict:
+    - "{{ helmChartInstall }}"
+#
+- name: Log helm install
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+...
+#EOF

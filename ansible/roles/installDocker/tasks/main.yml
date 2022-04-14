@@ -1,0 +1,75 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# Software package installs
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/package_module.html
+#######################################################################################################################
+- name: Update package repo and cache 
+  ansible.builtin.apt: 
+    update_cache: yes 
+    force_apt_get: yes 
+    cache_valid_time: 3600
+#
+- name: Upgrade all packages
+  ansible.builtin.apt: 
+    upgrade: dist 
+    force_apt_get: yes
+#
+- name: Check if a reboot is required
+  ansible.builtin.stat: 
+    path: /var/run/reboot-required 
+    get_checksum: no
+  register: systemRebootRequired
+#
+- name: Reboot required after kernel update
+  ansible.builtin.reboot:
+    msg: "Reboot initiated by Ansible for kernel updates"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: uptime
+  #
+  when: systemRebootRequired.stat.exists
+#
+- name: Install dependencies
+  ansible.builtin.package:
+    name: "{{ item }}"
+    #
+    state: present
+  #
+  with_items: "{{ installDependencies }}"
+#
+- name: Install docker.io
+  ansible.builtin.package:
+    name: "{{ item }}"
+    #
+    state: present
+  #
+  with_items: "{{ installPackages }}"
+#
+- name: Create a docker directory if it does not exist
+  ansible.builtin.file:
+    path: /etc/docker
+    mode: '0755'
+    #
+    state: directory
+#
+- name: Copy docker daemon configuration file
+  ansible.builtin.copy:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0400
+
+- name: Start docker service
+  ansible.builtin.service:
+    name: docker
+    enabled: yes
+    #
+    state: restarted
+    
+...
+#EOF
