@@ -1,0 +1,22 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# 
+#######################################################################################################################
+#
+helmRepoSetup:
+  bitnami:
+    repoUrl: https://charts.bitnami.com/bitnami
+  ealenn:
+    repoUrl: https://ealenn.github.io/charts
+#
+helmChartInstall:
+  tester:
+    chart: ealenn/echo-server
+  anotherweb:
+    chart: bitnami/apache
+#
+...
+#EOF

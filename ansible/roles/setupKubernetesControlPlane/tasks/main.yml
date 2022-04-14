@@ -1,0 +1,181 @@
+#BOF
+---
+#
+- name: Add an local DNS alias for our cp server
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "{{ '^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\s%s\\s' | format( kubeControlPlaneDnsAlias ) }}"
+    line: "{{ ansible_default_ipv4['address'] }} {{ kubeControlPlaneDnsAlias }} # Ansible managed record"
+    #
+    backup: yes
+    state: present
+#
+- name: Create calico configuration file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( calicoConfigFileName ) }}"
+    dest: "{{ '/root/%s' | format( calicoConfigFileName ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0600
+#
+- name: Create kubeadm configuration file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( kubeadmConfigFileName ) }}"
+    dest: "{{ '/root/%s' | format( kubeadmConfigFileName ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0600
+#
+- name: Initialize the Kubernetes cluster check
+  ansible.builtin.stat: 
+    path: /root/kubeadm-init.out
+  register: kubeadmInitCheck
+#
+- name: Initialize the Kubernetes cluster using kubeadm
+  ansible.builtin.shell:
+    # kubeadm
+    # init           | 
+    # --config       | 
+    # --upload-certs | 
+    cmd: "kubeadm init --config=kubeadm-config.yaml --upload-certs | tee kubeadm-init.out"
+    chdir: /root
+  when: kubeadmInitCheck.stat.exists == false
+  #
+  register: kubeadmInit
+#
+- name: Log kubeadm Initialization 
+  ansible.builtin.debug: 
+    var: kubeadmInit.stdout_lines
+  when: kubeadmInitCheck.stat.exists == false
+#
+- name: Retrieve non-root user environment 
+  ansible.builtin.shell:
+    cmd: set
+  register: userEnvironment
+  become: false
+#
+- name: Log non-root user environment 
+  ansible.builtin.debug: 
+    var: userEnvironment.stdout_lines
+# 
+- name: Setup non-root user name variable
+  ansible.builtin.set_fact:
+    kubeUserId: "{{ item | regex_search( userIdRegex, '\\1' ) | first | string }}"
+  with_items: "{{ userEnvironment.stdout_lines }}"
+  when: 
+    - item | regex_search( '^USER=' ) 
+# 
+- name: Setup non-root home dir variable
+  ansible.builtin.set_fact:
+    kubeUserDir:  "{{ item | regex_search( userHomeRegex, '\\1' ) | first | string }}"
+  with_items: "{{ userEnvironment.stdout_lines }}"
+  when: 
+    - item | regex_search( '^HOME=' ) 
+#
+- name: Setup non-root user variables
+  ansible.builtin.set_fact:
+    kubeUserCfgDir: "{{ '%s/%s' | format( kubeUserDir, kubeUserConfigDir ) }}"
+    kubeUserCfgFile: "{{ '%s/%s/%s' | format( kubeUserDir, kubeUserConfigDir, kubeUserConfigFile ) }}"
+#
+- name: Create a non-root user kubernetes configuration directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ kubeUserCfgDir }}"
+    mode: 0700
+    #
+    state: directory
+  become: false
+#
+- name: Copy kubernetes configuration file for non-root user
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    remote_src: true
+    dest: "{{ kubeUserCfgFile }}"
+#
+- name: Update kubernetes configuration file owner for non-root user 
+  ansible.builtin.file:
+    path: "{{ kubeUserCfgFile }}"
+    owner: "{{ kubeUserId }}"
+    group: "{{ kubeUserId }}"
+    mode: 0600
+    #
+    state: file
+#
+- name: Copy Calico configuration file for non-root user
+  ansible.builtin.copy:
+    src: "{{ '/root/%s' | format( calicoConfigFileName ) }}"
+    remote_src: true
+    dest: "{{ '%s/%s' | format( kubeUserCfgDir, calicoConfigFileName ) }}"
+#
+- name: Update Calico configuration file owner for non-root user 
+  ansible.builtin.file:
+    path:  "{{ '%s/%s' | format( kubeUserCfgDir, calicoConfigFileName ) }}"
+    owner: "{{ kubeUserId }}"
+    group: "{{ kubeUserId }}"
+    mode: 0600
+    #
+    state: file
+#
+- name: Apply calico configuration
+  ansible.builtin.command:
+    # kubectl
+    # apply | Apply a configuration change to a resource
+    #    -f | FILENAME
+    cmd: "kubectl apply -f {{ '%s/%s' | format( kubeUserCfgDir, calicoConfigFileName ) }}"
+  #
+  register: calicoConfig
+  become: false
+#
+- name: Log calico configuration
+  ansible.builtin.debug: 
+    var: calicoConfig.stdout_lines
+#
+- name: Setup kubectl shell completion
+  ansible.builtin.lineinfile:
+    path: "{{ '%s/.bashrc' | format( kubeUserDir ) }}"
+    regexp: "{{ '^source\\s\\<\\(%s\\)\\s' | format( kubeUserShellCompletion ) }}"
+    line: "{{ 'source <(%s) # Ansible managed data' | format( kubeUserShellCompletion ) }}"
+    # 
+    backup: yes
+    state: present
+    # 
+  become: false
+#
+- name: Check kubernetes configuration
+  ansible.builtin.command:
+    # kubeadm
+    #         config | 
+    #          print |
+    #  init-defaults | 
+    cmd: "kubeadm config print init-defaults"
+  #
+  register: kubeadmConfigCheck
+#
+- name: Log kubernetes configuration
+  ansible.builtin.debug: 
+    var: kubeadmConfigCheck.stdout_lines
+#
+- name: Generate kubeadm join token 
+  ansible.builtin.command:
+    # kubectl
+    # token  | 
+    # create | 
+    cmd: "kubeadm token create"
+  #
+  register: kubeadmToken
+# 
+- name: Create Discovery Token CA Cert Hash
+  ansible.builtin.shell:
+  #
+    cmd: |
+      openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | \
+      openssl rsa -pubin -outform der 2>/dev/null | \
+      openssl dgst -sha256 -hex | sed 's/.*= //'
+  #
+  register: kubeDiscoveryTokenCaCertHash
+#
+- name: Define kubernetes configuration variable
+  ansible.builtin.set_fact:
+    kubeControlPlaneIpAddress: "{{ computeIp }}"
+    kubeControlPlaneJoinToken: "{{ kubeadmToken.stdout_lines | first | string }}"
+    kubeControlPlaneDiscoveryTokenCaCertHash: "{{ kubeDiscoveryTokenCaCertHash.stdout_lines | first | string }}"
+#
+...
+#EOF

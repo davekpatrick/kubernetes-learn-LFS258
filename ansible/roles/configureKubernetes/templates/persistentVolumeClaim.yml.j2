@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ persistentVolumeClaim_name }}
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+     requests:
+       storage: {{ persistentVolumeClaim_size }}

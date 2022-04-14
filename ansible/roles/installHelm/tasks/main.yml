@@ -1,0 +1,74 @@
+#
+# wget https://get.helm.sh/helm-v3.8.0-linux-amd64.tar.gz
+# tar -xvf helm-v3.8.0-linux-amd64.tar.gz
+# sudo cp linux-amd64/helm /usr/local/bin/helm
+# helm search hub database
+# helm repo add ealenn https://ealenn.github.io/charts
+# helm repo update
+# 
+#BOF
+---
+#######################################################################################################################
+# Software package installs
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/package_module.html
+#######################################################################################################################
+- name: Update package repository and cache 
+  ansible.builtin.apt: 
+    update_cache: yes 
+    force_apt_get: yes 
+    cache_valid_time: 3600
+#
+- name: Upgrade all packages
+  ansible.builtin.apt: 
+    upgrade: dist 
+    force_apt_get: yes
+#
+- name: Check if a reboot is required
+  ansible.builtin.stat: 
+    path: /var/run/reboot-required 
+    get_checksum: no
+  register: systemRebootRequired
+#
+- name: Reboot required after kernel update
+  ansible.builtin.reboot:
+    msg: "Reboot initiated by Ansible for kernel updates"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: uptime
+  when: systemRebootRequired.stat.exists
+#
+- name: Install dependencies
+  ansible.builtin.package:
+    name: "{{ item }}"
+    #
+    state: present
+  with_items: "{{ installDependencies }}"
+#
+- name: Add helm package repository key
+  ansible.builtin.apt_key:
+    url: "{{ helmRepositoryKeyUrl }}"
+    state: present
+#
+- name: Add helm package repository source
+  ansible.builtin.apt_repository:
+    repo: deb {{ helmRepository }}
+    state: present
+#
+- name: Update helm package repository and cache 
+  ansible.builtin.apt: 
+    update_cache: yes 
+    force_apt_get: yes 
+    cache_valid_time: 3600
+#
+- name: Install helm packages
+  ansible.builtin.apt: 
+    name: "{{ '%s' | format( item) }}"
+    allow_downgrade: yes
+    #
+    state: present
+  with_items: "{{ installPackages }}"
+#
+...
+#EOF

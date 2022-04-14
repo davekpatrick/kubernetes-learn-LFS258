@@ -1,0 +1,78 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# Software package installs
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/package_module.html
+#######################################################################################################################
+- name: Update package repository and cache 
+  ansible.builtin.apt: 
+    update_cache: yes 
+    force_apt_get: yes 
+    cache_valid_time: 3600
+#
+- name: Upgrade all packages
+  ansible.builtin.apt: 
+    upgrade: dist 
+    force_apt_get: yes
+#
+- name: Check if a reboot is required
+  ansible.builtin.stat: 
+    path: /var/run/reboot-required 
+    get_checksum: no
+  register: systemRebootRequired
+#
+- name: Reboot required after kernel update
+  ansible.builtin.reboot:
+    msg: "Reboot initiated by Ansible for kernel updates"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: uptime
+  when: systemRebootRequired.stat.exists
+#
+- name: Install dependencies
+  ansible.builtin.package:
+    name: "{{ item }}"
+    #
+    state: present
+  with_items: "{{ installDependencies }}"
+#
+- name: Install packages
+  ansible.builtin.apt: 
+    name: "{{ '%s' | format( item ) }}"
+    allow_downgrade: yes
+    #
+    state: present
+  with_items: "{{ installPackages }}"
+#
+- name: Create Network File System Server directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ nfsDirName }}"
+    mode: "{{ nfsDirPermissions }}"
+    #
+    state: directory
+#
+- name: Setup test file
+  ansible.builtin.copy:
+    content: "{{ nfsTestFileContent }}"
+    dest: "{{ nfsDirName + '/' + nfsTestFileName }}"
+#
+- name: Add an local DNS alias for our cp server
+  ansible.builtin.lineinfile:
+    path: "{{ nfsExportsConfigFile }}"
+    regexp: "{{ '^%s\\s%s' | format( nfsDirName, nfsExportRightsConfig ) }}"
+    line: "{{ nfsDirName }} {{ nfsExportRightsConfig }}"
+    #
+    backup: yes
+    state: present
+# 
+- name: Cause {{ nfsExportsConfigFile }} to be re-read
+  ansible.builtin.command:
+    cmd: 
+      sudo exportfs -ra
+
+...
+#EOF

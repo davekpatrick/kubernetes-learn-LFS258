@@ -1,0 +1,63 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# Software package installs
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/package_module.html
+#######################################################################################################################
+- name: Update package repository and cache 
+  ansible.builtin.apt: 
+    update_cache: yes 
+    force_apt_get: yes 
+    cache_valid_time: 3600
+#
+- name: Upgrade all packages
+  ansible.builtin.apt: 
+    upgrade: dist 
+    force_apt_get: yes
+#
+- name: Check if a reboot is required
+  ansible.builtin.stat: 
+    path: /var/run/reboot-required 
+    get_checksum: no
+  register: systemRebootRequired
+#
+- name: Reboot required after kernel update
+  ansible.builtin.reboot:
+    msg: "Reboot initiated by Ansible for kernel updates"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: uptime
+  when: systemRebootRequired.stat.exists
+#
+- name: Install dependencies
+  ansible.builtin.package:
+    name: "{{ item }}"
+    #
+    state: present
+  with_items: "{{ installDependencies }}"
+#
+- name: Install packages
+  ansible.builtin.apt: 
+    name: "{{ '%s' | format( item ) }}"
+    allow_downgrade: yes
+    #
+    state: present
+  with_items: "{{ installPackages }}"
+#
+- name: Mount network file system share
+  ansible.posix.mount:
+    src: "{{ '%s:/opt/sfw' | format( kubeControlPlaneDnsAlias ) }}"
+    path: /mnt
+    fstype: nfs
+    state: mounted
+  #
+  retries: 2
+
+
+#
+...
+#EOF

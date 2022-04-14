@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: {{ appKubeCreateKind }}
+metadata:
+  name: {{ appKubeCreateName }}
+spec:
+  containers:
+  - name: nginx
+    image: {{ appKubeCreateImage }}
+    volumeMounts:
+    - name: {{ cars_kubeCreateVolumeName }}
+      mountPath: /etc/{{ appKubeCreateName }}
+  volumes:
+    - name: {{ cars_kubeCreateVolumeName }}
+      configMap:
+        name: {{ cars_kubeCreateConfigMap }}

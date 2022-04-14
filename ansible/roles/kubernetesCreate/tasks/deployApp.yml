@@ -1,0 +1,130 @@
+#
+#BOF
+---
+#
+- name: Create kubernetes configuration file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( appKubeCreateConfigFileName ) }}"
+    dest: "{{ '~/%s' | format( appKubeCreateConfigFileName ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0644
+# 
+- name: "Check kubernetes kind[{{ appKubeCreateKind }}]"
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ appKubeCreateNamespace  | default('default') | string }} get {{ appKubeCreateKind }} {{ appKubeCreateName }}" 
+  #
+  register: kubeCreateCheck
+  ignore_errors: true 
+#
+- name: Create kubernetes object
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ appKubeCreateNamespace  | default('default') | string }} create -f {{ appKubeCreateConfigFileName }}"
+  #
+  register: taskResponse
+  when:
+    - kubeCreateCheck.rc == 1
+#
+- name: Log kubernetes create
+  ansible.builtin.debug: 
+    var: taskResponse
+# 
+- name: Check kubernetes create and pod
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ appKubeCreateNamespace  | default('default') | string }} get {{ appKubeCreateKind }},pod" 
+  #
+  register: taskResponse  
+#
+- name: Log kubernetes create and pod
+  ansible.builtin.debug: 
+    var: taskResponse
+# 
+- name: Check kubernetes expose
+  ansible.builtin.command:
+    cmd: "kubectl  --namespace {{ appKubeCreateNamespace  | default('default') | string }} get svc {{ appKubeCreateName }}" 
+  #
+  register: kubeExposeCreateCheck
+  ignore_errors: true 
+  when:
+    - appKubeCreateExpose | default(false) | bool == true
+# 
+- name: Create Kubernetes expose 
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ appKubeCreateNamespace  | default('default') | string }} expose deployment {{ appKubeCreateName }} --type=LoadBalancer" 
+  #
+  register: taskResponse
+  when:
+    - appKubeCreateExpose | default(false) | bool == true
+    - kubeExposeCreateCheck.rc != 0
+#
+- name: Log kubernetes expose
+  ansible.builtin.debug: 
+    var: taskResponse
+  #
+  when:
+    - appKubeCreateExpose | default(false) | bool == true
+# 
+- name: Check kubernetes service configuration
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ appKubeCreateNamespace  | default('default') | string }} get svc {{ appKubeCreateName }}" 
+  #
+  register: taskResponse
+  when:
+    - appKubeCreateExpose | default(false) | bool == true
+#
+- name: Log kubernetes service configuration
+  ansible.builtin.debug: 
+    var: taskResponse
+  #
+  when:
+    - appKubeCreateExpose | default(false) | bool == true
+# 
+- name: Get kubernetes pod name
+  ansible.builtin.shell:
+    cmd: >
+      kubectl --namespace {{ appKubeCreateNamespace  | default('default') | string }} get pod 
+      | grep -i '{{ appKubeCreateName }}'
+      | grep -Eo '^([^ ]+)'
+  #
+  register: taskResponse
+  when:
+    - appKubeCreateKind != 'cronjobs.batch'
+    - appKubeCreateKind != 'jobs.batch'
+#
+- name: Define kubernetes pod variables
+  ansible.builtin.set_fact:
+    appKubeCreatePod: "{{ taskResponse.stdout_lines | first | string }}"
+  when:
+    - appKubeCreateKind != 'cronjobs.batch'
+    - appKubeCreateKind != 'jobs.batch'
+#
+- name: Log kubernetes pod name
+  ansible.builtin.debug: 
+    var: appKubeCreatePod
+#
+- name: Check kubernetes pod environment variable
+  ansible.builtin.shell:
+    cmd: >
+     kubectl --namespace {{ appKubeCreateNamespace  | default('default') | string }} exec {{ appKubeCreatePod }} -- printenv 
+     | grep KUBERNETES
+  #
+  retries: 2
+  delay: 30
+  register: taskResponse
+  ignore_errors: true 
+  until: taskResponse.rc == 0
+  when: 
+    - appKubeCreateVarsCheck | default(false) | bool == true
+    - appKubeCreateKind != 'cronjobs.batch'
+    - appKubeCreateKind != 'jobs.batch'
+#
+- name: Log kubernetes pod environment variable
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+  #
+  when: 
+    - appKubeCreateVarsCheck | default(false) | bool == true
+    - appKubeCreateKind != 'cronjobs.batch'
+    - appKubeCreateKind != 'jobs.batch'
+#
+...
+#EOF
