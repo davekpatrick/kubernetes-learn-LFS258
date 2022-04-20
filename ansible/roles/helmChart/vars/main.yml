@@ -17,6 +17,18 @@ helmChartInstall:
     chart: ealenn/echo-server
   anotherweb:
     chart: bitnami/apache
+#######################################################################################################################
+# LAB 11.2: Ingress Controller
+#######################################################################################################################
 #
+ingressName: ingress-nginx
+ingressRepoUrl: https://kubernetes.github.io/ingress-nginx
+ingressRepoName: ingress-nginx
+ingressHelmValueFile: ingress-nginx-values.yml
+ingressHelmKind: DaemonSet
+ingressHelmName: myingress
+
+
+
 ...
 #EOF

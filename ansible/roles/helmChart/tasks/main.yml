@@ -3,7 +3,18 @@
 #BOF
 ---
 #######################################################################################################################
-# 
+# Shared setup
+#######################################################################################################################
+- name: Setup home dir variable
+  ansible.builtin.set_fact:
+    userHomeDir:  "{{ item | regex_search( userHomeDirRegex, '\\1' ) | first | string }}"
+  #
+  with_items: "{{ taskResponse.stdout_lines }}"
+  when: 
+    - item | regex_search( '^HOME=' ) 
+  no_log: true
+#######################################################################################################################
+# LAB :
 #######################################################################################################################
 #
 - name: Add helm repo
@@ -28,6 +39,42 @@
     - "{{ helmChartInstall }}"
 #
 - name: Log helm install
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#######################################################################################################################
+# LAB 11.2: Ingress Controller
+#######################################################################################################################
+#
+- name: Add helm repo[{{ ingressRepoName }}]
+  ansible.builtin.shell:
+    cmd:
+      helm repo add {{ ingressRepoName }} {{ ingressRepoUrl }}
+#
+- name: Update helm repo
+  ansible.builtin.shell:
+    cmd: 
+      helm repo update
+
+- name: helm fetch[{{ ingressRepoName }}/{{ ingressName }}]
+  ansible.builtin.shell:
+    cmd:
+      helm fetch {{ ingressRepoName }}/{{ ingressName }} --untar
+#
+- name: Create helm values.yaml file[{{ ingressName }}]
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( ingressHelmValueFile ) }}"
+    dest: "{{ '%s/%s/values.yaml' | format( userHomeDir, ingressName ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0644
+#
+- name: helm install[{{ ingressHelmName }}]
+  ansible.builtin.shell:
+    cmd:
+      cd {{ ingressName }} ; helm upgrade --install {{ ingressHelmName }} . 
+  #
+  register: taskResponse
+#
+- name: Log helm install[{{ ingressHelmName }}]
   ansible.builtin.debug: 
     var: taskResponse.stdout_lines
 #
