@@ -95,14 +95,19 @@ resource "google_compute_firewall" "external" {
   network       = data.google_compute_network.vpc.name
   direction     = "INGRESS"
   source_ranges = ["0.0.0.0/0"]
-  #
+  # testing 
   allow {
     protocol = "icmp"
   }
-  #
+  # SSH connections
   allow {
     protocol = "tcp"
     ports    = ["22"]
+  }
+  # testing/management consoles
+  allow {
+    protocol = "tcp"
+    ports    = ["31500"]
   }
 }
 ## ---------------------------------------------------

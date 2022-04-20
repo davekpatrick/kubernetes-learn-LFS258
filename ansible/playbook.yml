@@ -112,6 +112,12 @@
       become: false
     #
     - role: 
+        installLinkerd
+      when:
+        - computeNodeType == "controlPlane"
+      become: false
+    #
+    - role: 
         kubernetesCreate
       when:
         - computeNodeType == "controlPlane"

@@ -1,0 +1,136 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# 
+#######################################################################################################################
+- name: Download and install linkerd
+  ansible.builtin.shell:
+    cmd: 
+      curl --silent --show-error --fail --location --proto '=https' --tlsv1.2 {{ installUrl }} | sh
+  #
+  register: taskResponse
+#
+- name: Log linkerd install
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+- name: Retrieve non-root user environment 
+  ansible.builtin.shell:
+    cmd: set
+  #
+  register: taskResponse
+# 
+- name: Setup home dir variable
+  ansible.builtin.set_fact:
+    userHomeDir:  "{{ item | regex_search( userHomeDirRegex, '\\1' ) | first | string }}"
+  #
+  with_items: "{{ taskResponse.stdout_lines }}"
+  when: 
+    - item | regex_search( '^HOME=' ) 
+  no_log: true
+#
+- name: Update PATH variable in non-root user profile
+  ansible.builtin.lineinfile:
+    path: "{{ '%s/.bashrc' | format( userHomeDir ) }}"
+    regexp: "{{ '^export PATH=$PATH:%s/%s  # Ansible managed data' | format( userHomeDir, installDir ) }}"
+    line: "{{ 'export PATH=$PATH:%s/%s  # Ansible managed data' | format( userHomeDir, installDir ) }}"
+    # 
+    backup: yes
+    state: present
+#
+- name: linkerd pre-check
+  ansible.builtin.shell:
+    cmd: 
+      "{{ '%s/%s/linkerd check --pre --output json' | format ( userHomeDir, installDir ) }}"
+  #
+  register: taskResponse
+  ignore_errors: true
+#
+- name: Log linkerd pre-check
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+  #
+  when: 
+    - taskResponse.rc == 0
+#
+- name: linkerd install
+  ansible.builtin.shell:
+    cmd: 
+      "{{ '%s/%s/linkerd install | kubectl apply -f -' | format ( userHomeDir, installDir ) }}"
+  #
+  register: taskResponse
+  when:
+    - not taskResponse.stderr is search( installCheckString )
+#
+- name: linkerd check
+  ansible.builtin.shell:
+    cmd: 
+      "{{ '%s/%s/linkerd check' | format ( userHomeDir, installDir ) }}"
+  #
+  register: taskResponse
+#
+- name: Log linkerd check
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+- name: linkerd viz install
+  ansible.builtin.shell:
+    cmd: 
+      "{{ '%s/%s/linkerd viz install | kubectl apply -f -' | format ( userHomeDir, installDir ) }}"
+  #
+  register: taskResponse
+#
+- name: Log linkerd viz install
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+- name: linkerd viz check
+  ansible.builtin.shell:
+    cmd: 
+      "{{ '%s/%s/linkerd viz check' | format ( userHomeDir, installDir ) }}"
+  #
+  register: taskResponse
+#
+- name: Create linkerd viz web configuration patch file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( linkerdVizKubeWebDepoymentFile ) }}"
+    dest: "{{ '%s/%s' | format( userHomeDir, linkerdVizKubeWebDepoymentFile ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0644
+# 
+- name: "Patch linkerd viz web config"
+  ansible.builtin.shell:
+    cmd: "kubectl --namespace {{ linkerdVizKubeCreateNamespace | string }} patch {{ linkerdVizKubeCreateKind }} {{ linkerdVizKubeCreateName }} --patch-file={{ '%s/%s' | format( userHomeDir, linkerdVizKubeWebDepoymentFile ) }}" 
+  #
+  register: taskResponse
+#
+- name: Log patch linkerd viz web config
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+- name: Create linkerd viz service configuration patch file
+  ansible.builtin.template:
+    src: "{{ '%s.j2' | format( linkerdVizKubeServiceFile ) }}"
+    dest: "{{ '%s/%s' | format( userHomeDir, linkerdVizKubeServiceFile ) }}"
+    # NOTE: /usr/bin/chmod modes are actually octal numbers
+    mode: 0644
+# 
+- name: "Patch linkerd viz service config"
+  ansible.builtin.shell:
+    cmd: "kubectl --namespace {{ linkerdVizKubeCreateNamespace | string }} patch {{ linkerdVizKubeServiceKind }} {{ linkerdVizKubeServiceName }} --patch-file={{ '%s/%s' | format( userHomeDir, linkerdVizKubeServiceFile ) }}" 
+  #
+  register: taskResponse
+#
+- name: Log patch linkerd viz service config
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+- name: Start backgroupd linkerd viz dashboard d
+  ansible.builtin.shell:
+    cmd: 
+      "{{ 'cd %s/%s/ ; linkerd viz dashboard </dev/null >/dev/null 2>&1 &' | format ( userHomeDir, installDir ) }}"
+
+...
+#EOF
