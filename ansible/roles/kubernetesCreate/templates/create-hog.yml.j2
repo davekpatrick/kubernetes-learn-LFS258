@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    deployment.kubernetes.io/revision: "1"
-  creationTimestamp: "2022-04-01T20:55:41Z"
-  generation: 1
+#  annotations:
+#    deployment.kubernetes.io/revision: "1"
+#  creationTimestamp: "2022-04-01T20:55:41Z"
+#  generation: 1
   labels:
     app: {{ appKubeCreateName }}
   name: {{ appKubeCreateName }}
   namespace: default
-  resourceVersion: "46187"
-  uid: 8b501425-688a-4a35-9fed-29939de0cf49
+#  resourceVersion: "46187"
+#  uid: 8b501425-688a-4a35-9fed-29939de0cf49
 spec:
   progressDeadlineSeconds: 600
   replicas: 1

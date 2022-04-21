@@ -1,0 +1,33 @@
+#BOF
+apiVersion: networking.k8s.io/v1
+kind: {{ appKubeCreateKind }}
+metadata:
+  name: {{ appKubeCreateName }}
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  namespace: default
+spec:
+  rules:
+  - host: {{ ingress_kubeCreateServiceWebOneHost }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ webOne_kubeCreateName }}
+            port:
+              number: {{ webOne_kubeCreateContainerPort }}
+        path: /
+        pathType: ImplementationSpecific
+  - host: {{ ingress_kubeCreateServiceWebTwoHost }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ webTwo_kubeCreateName }}
+            port:
+              number: {{ webTwo_kubeCreateContainerPort }}
+        path: /
+        pathType: ImplementationSpecific
+status:
+  loadBalancer: {}
+#EOF

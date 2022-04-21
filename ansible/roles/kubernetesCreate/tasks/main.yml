@@ -3,7 +3,26 @@
 #BOF
 ---
 #######################################################################################################################
-# Lab 3 nginx
+# Shared setup
+#######################################################################################################################
+#
+- name: Retrieve non-root user environment 
+  ansible.builtin.shell:
+    cmd: set
+  #
+  register: taskResponse
+  no_log: true
+#
+- name: Setup home dir variable
+  ansible.builtin.set_fact:
+    userHomeDir:  "{{ item | regex_search( userHomeDirRegex, '\\1' ) | first | string }}"
+  #
+  with_items: "{{ taskResponse.stdout_lines }}"
+  when: 
+    - item | regex_search( '^HOME=' ) 
+  no_log: true
+#######################################################################################################################
+# LAB 3: nginx
 #######################################################################################################################
 - name: Kubernetes Create[{{ nginx_kubeCreateName }}]
   ansible.builtin.include_tasks:
@@ -236,7 +255,7 @@
 - name: Get expose NodePort {{ nginxOne_kubeCreateName }}
   ansible.builtin.command:
     cmd: 
-      kubectl -n accounting get service {{ nginxOne_kubeCreateNodePortName }}
+      kubectl -n {{ nginxOne_kubeCreateNamespace }} get service {{ nginxOne_kubeCreateNodePortName }}
   #
   register: taskResponse
   ignore_errors: true
@@ -244,10 +263,36 @@
 - name: Create expose NodePort service {{ nginxOne_kubeCreateName }}
   ansible.builtin.command:
     cmd:
-      kubectl -n accounting expose deployment {{ nginxOne_kubeCreateName }} --type=NodePort --name={{ nginxOne_kubeCreateNodePortName }}
+      kubectl -n {{ nginxOne_kubeCreateNamespace }} expose {{ nginxOne_kubeCreateKind }} {{ nginxOne_kubeCreateName }} --type=NodePort --name={{ nginxOne_kubeCreateNodePortName }}
   #
   when:
     -  taskResponse.rc != 0
+#######################################################################################################################
+# LAB 11.1: Service Mesh
+#######################################################################################################################
+#
+- name: linkerd inject [{{ nginxOne_kubeCreateName }}]
+  ansible.builtin.shell:
+    cmd: 
+      kubectl --namespace {{ nginxOne_kubeCreateNamespace }} get {{ nginxOne_kubeCreateKind }} {{ nginxOne_kubeCreateName }} -o yaml | {{ '%s/%s/linkerd' | format ( userHomeDir, linkerdDir ) }} inject - | kubectl apply -f -
+  #
+  register: taskResponse
+#
+- name: Log linkerd inject [{{ nginxOne_kubeCreateName }}]
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+#
+- name: Scale deployment [{{ nginxOne_kubeCreateName }}]
+  ansible.builtin.shell:
+    cmd: 
+      kubectl --namespace {{ nginxOne_kubeCreateNamespace }} scale {{ nginxOne_kubeCreateKind }} {{ nginxOne_kubeCreateName }} --replicas=5
+  #
+  register: taskResponse
+#
+- name: Log scale deployment [{{ nginxOne_kubeCreateName }}]
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
 #######################################################################################################################
 # 
 #######################################################################################################################
@@ -278,5 +323,65 @@
     cmd: 
       kubectl exec -it {{ nettool_kubeCreateName }} -- apt-get install -y {{ item }}
   with_items: "{{ nettool_kubeCreatePackages }}"
+#######################################################################################################################
+# LAB 11.2: Ingress Controller
+#######################################################################################################################
+- name: "Kubernetes Create [{{ webOne_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ webOne_kubeCreateName }}"
+        - appKubeCreateKind: "{{ webOne_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ webOne_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( webOne_kubeCreateName ) }}"
+        - appKubeCreateContainerPort: "{{ webOne_kubeCreateContainerPort }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: true
+#
+- name: "Kubernetes Create [{{ webOne_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ webTwo_kubeCreateName }}"
+        - appKubeCreateKind: "{{ webTwo_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ webTwo_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( webTwo_kubeCreateName ) }}"
+        - appKubeCreateContainerPort: "{{ webTwo_kubeCreateContainerPort }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: true
+#
+- name: "Kubernetes Create [{{ ingress_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ ingress_kubeCreateName }}"
+        - appKubeCreateKind: "{{ ingress_kubeCreateKind }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( ingress_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: false
+#
+- name: Get ingress
+  ansible.builtin.shell:
+    cmd: 
+      kubectl get ingress --all-namespaces
+  #
+  register: taskResponse
+#
+- name: Log ingress 
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+
+
+#kubectl get svc | grep ingress
+#curl -H "Host: www.external.com" http://10.104.227.79
+#kubectl get ds myingress-ingress-nginx-controller -o yaml  | \linkerd inject --ingress - | kubectl apply -f -
+#######################################################################################################################
+# 
+#######################################################################################################################
+
+#
 ...
 #EOF

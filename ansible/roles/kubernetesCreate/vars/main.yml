@@ -5,6 +5,10 @@
 #######################################################################################################################
 # 
 #######################################################################################################################
+linkerdDir: .linkerd2/bin
+#######################################################################################################################
+# 
+#######################################################################################################################
 nginx_kubeCreateName: nginx
 nginx_kubeCreateKind: Deployment
 nginx_kubeCreateImage: nginx:latest
@@ -99,6 +103,23 @@ nettool_kubeCreatePackages:
   - curl
   - tzdata
   - dnsutils
+#######################################################################################################################
+# LAB 11.2: Ingress Controller
+#######################################################################################################################
+webOne_kubeCreateName: web-one
+webOne_kubeCreateKind: Deployment
+webOne_kubeCreateImage: nginx:latest
+webOne_kubeCreateContainerPort: 80
+#
+webTwo_kubeCreateName: web-two
+webTwo_kubeCreateKind: Deployment
+webTwo_kubeCreateImage: httpd:latest
+webTwo_kubeCreateContainerPort: 80
+#
+ingress_kubeCreateName: ingress-test
+ingress_kubeCreateKind: Ingress
+ingress_kubeCreateServiceWebOneHost: internal.org
+ingress_kubeCreateServiceWebTwoHost: www.external.com
 #
 ...
 #EOF

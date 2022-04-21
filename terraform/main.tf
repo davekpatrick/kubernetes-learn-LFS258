@@ -104,10 +104,15 @@ resource "google_compute_firewall" "external" {
     protocol = "tcp"
     ports    = ["22"]
   }
-  # testing/management consoles
+  # linkered service mesh 
   allow {
     protocol = "tcp"
     ports    = ["31500"]
+  }
+  # test site
+  allow {
+    protocol = "tcp"
+    ports    = ["80"]
   }
 }
 ## ---------------------------------------------------

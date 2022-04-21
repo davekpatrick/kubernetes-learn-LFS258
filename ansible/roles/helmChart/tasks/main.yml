@@ -5,6 +5,14 @@
 #######################################################################################################################
 # Shared setup
 #######################################################################################################################
+#
+- name: Retrieve non-root user environment 
+  ansible.builtin.shell:
+    cmd: set
+  #
+  register: taskResponse
+  no_log: true
+#
 - name: Setup home dir variable
   ansible.builtin.set_fact:
     userHomeDir:  "{{ item | regex_search( userHomeDirRegex, '\\1' ) | first | string }}"
@@ -54,7 +62,14 @@
   ansible.builtin.shell:
     cmd: 
       helm repo update
-
+#
+- name: Recursively remove {{ ingressName }} directory
+  ansible.builtin.file:
+    path: "{{ '%s/%s' | format( userHomeDir, ingressName ) }}"
+    state: absent
+  #
+  ignore_errors: true
+#
 - name: helm fetch[{{ ingressRepoName }}/{{ ingressName }}]
   ansible.builtin.shell:
     cmd:

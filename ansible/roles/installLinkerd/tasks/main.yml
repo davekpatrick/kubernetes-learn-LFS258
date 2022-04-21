@@ -58,7 +58,7 @@
 - name: linkerd install
   ansible.builtin.shell:
     cmd: 
-      "{{ '%s/%s/linkerd install | kubectl apply -f -' | format ( userHomeDir, installDir ) }}"
+      "{{ '%s/%s/linkerd install --set proxyInit.runAsRoot=true | kubectl apply -f -' | format ( userHomeDir, installDir ) }}"
   #
   register: taskResponse
   when:

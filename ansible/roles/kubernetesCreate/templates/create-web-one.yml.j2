@@ -1,0 +1,44 @@
+#
+---
+apiVersion: apps/v1
+kind: {{ appKubeCreateKind }}
+metadata:
+  labels:
+    run: {{ appKubeCreateName }}
+  name: {{ appKubeCreateName }}
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ appKubeCreateName }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: {{ appKubeCreateName }}
+    spec:
+      containers:
+      - image: {{ appKubeCreateImage }}
+        name: {{ appKubeCreateName }}
+        ports:
+        - containerPort: {{ appKubeCreateContainerPort }}
+          protocol: TCP
+        resources: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ appKubeCreateName }}
+spec:
+  selector:
+    app: {{ appKubeCreateName }}
+  type: ClusterIP
+  ports:
+    - targetPort: {{ appKubeCreateContainerPort }}
+      port: {{ appKubeCreateContainerPort }}
+...
