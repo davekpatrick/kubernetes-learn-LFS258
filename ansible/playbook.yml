@@ -118,16 +118,17 @@
       become: false
     #
     - role: 
-        kubernetesCreate
+        helmChart
       when:
         - computeNodeType == "controlPlane"
       become: false
     #
     - role: 
-        helmChart
+        kubernetesCreate
       when:
         - computeNodeType == "controlPlane"
       become: false
+
   #
   post_tasks:
     #

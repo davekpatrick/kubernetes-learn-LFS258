@@ -373,11 +373,50 @@
 - name: Log ingress 
   ansible.builtin.debug: 
     var: taskResponse.stdout_lines
+#
+- name: Linkerd Inject ingress[{{ ingress_kubeCreateName }}]
+  ansible.builtin.shell:
+    cmd: 
+      kubectl get daemonset {{ ingress_kubeInjectControllerName }} -o yaml | {{ '%s/%s/linkerd' | format ( userHomeDir, linkerdDir ) }} inject --ingress - | kubectl apply -f -
+  #
+  register: taskResponse
+#
+- name: Log linkerd Inject ingress[{{ ingress_kubeCreateName }}]
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#######################################################################################################################
+# LAB 12.1: Assign Pods Using Labels
+#######################################################################################################################
+- name: "Kubernetes Create [{{ vip_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ vip_kubeCreateName }}"
+        - appKubeCreateKind: "{{ vip_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ vip_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( vip_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: true
+        - appKubeCreateNode: "{{ vip_kubeCreateNode }}"
+#
+- name: "Kubernetes Create [{{ oth_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ oth_kubeCreateName }}"
+        - appKubeCreateKind: "{{ oth_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ oth_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( oth_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: true
+        - appKubeCreateNode: "{{ oth_kubeCreateNode }}"
+#######################################################################################################################
+# LAB 12.2: Using Taints to Control Pod Deployment
+#######################################################################################################################
 
 
-#kubectl get svc | grep ingress
-#curl -H "Host: www.external.com" http://10.104.227.79
-#kubectl get ds myingress-ingress-nginx-controller -o yaml  | \linkerd inject --ingress - | kubectl apply -f -
 #######################################################################################################################
 # 
 #######################################################################################################################

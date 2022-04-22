@@ -121,5 +121,19 @@ ingress_kubeCreateKind: Ingress
 ingress_kubeCreateServiceWebOneHost: internal.org
 ingress_kubeCreateServiceWebTwoHost: www.external.com
 #
+ingress_kubeInjectControllerName: myingress-ingress-nginx-controller
+#######################################################################################################################
+# LAB 12.1: Assign Pods Using Labels
+#######################################################################################################################
+vip_kubeCreateName: vip
+vip_kubeCreateKind: Pod
+vip_kubeCreateImage: busybox:latest
+vip_kubeCreateNode: vip
+#
+oth_kubeCreateName: other
+oth_kubeCreateKind: Pod
+oth_kubeCreateImage: busybox:latest
+oth_kubeCreateNode: other
+#
 ...
 #EOF

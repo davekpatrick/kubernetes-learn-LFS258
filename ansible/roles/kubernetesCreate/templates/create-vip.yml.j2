@@ -1,0 +1,31 @@
+#EOF
+apiVersion: v1
+kind: {{ appKubeCreateKind }}
+metadata:
+  name: {{ appKubeCreateName }}
+spec:
+  containers:
+  - name: {{ appKubeCreateName }}1
+    image: busybox
+    args:
+    - sleep
+    - "1000000"
+  - name: {{ appKubeCreateName }}2
+    image: busybox
+    args:
+    - sleep
+    - "1000000"
+  - name: {{ appKubeCreateName }}3
+    image: busybox
+    args:
+    - sleep
+    - "1000000"
+  - name: {{ appKubeCreateName }}4
+    image: busybox
+    args:
+    - sleep
+    - "1000000"
+  #
+  nodeSelector:
+    status: {{ appKubeCreateNode }}
+#EOF
