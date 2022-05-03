@@ -69,51 +69,62 @@
     # 
     - role: 
         installDocker
+      when:
+        - computeInstall == 1
       become: true
     # 
     - role: 
         installKubernetes
+      when:
+        - computeInstall == 1
       become: true
     # 
     - role: 
         installHelm
       when:
+        - computeInstall == 1
         - computeNodeType == "controlPlane"
       become: true
     # 
     - role: 
         setupKubernetesControlPlane
       when:
+        - computeInstall == 1
         - computeNodeType == "controlPlane"
       become: true
     # 
     - role: 
         setupKubernetesWorker
       when:
+        - computeInstall == 1
         - computeNodeType == "worker"
       become: true
     #
     - role:
         setupNetworkFileSystemServer
       when:
+        - computeInstall == 1
         - computeNodeType == "controlPlane"
       become: true
     #
     - role:
         setupNetworkFileSystemClient
       when:
+        - computeInstall == 1
         - computeNodeType != "controlPlane"
       become: true
     # 
     - role: 
         configureKubernetes
       when:
+        - computeInstall == 1
         - computeNodeType == "controlPlane"
       become: false
     #
     - role: 
         installLinkerd
       when:
+        - computeInstall == 1
         - computeNodeType == "controlPlane"
       become: false
     #

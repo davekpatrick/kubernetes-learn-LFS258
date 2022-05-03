@@ -217,6 +217,7 @@ resource "local_file" "ansibleInventory" {
            provisionerSource=terraform
            computeEnvironment=${var.computeEnvironment}
            computeProductKey=${var.computeInstanceKey}
+           computeInstall=1
            
            [${var.computeInstanceKey}]
            # members of the '${var.computeInstanceKey}' group
