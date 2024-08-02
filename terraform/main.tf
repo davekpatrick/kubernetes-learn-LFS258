@@ -95,14 +95,24 @@ resource "google_compute_firewall" "external" {
   network       = data.google_compute_network.vpc.name
   direction     = "INGRESS"
   source_ranges = ["0.0.0.0/0"]
-  #
+  # testing 
   allow {
     protocol = "icmp"
   }
-  #
+  # SSH connections
   allow {
     protocol = "tcp"
     ports    = ["22"]
+  }
+  # linkered service mesh 
+  allow {
+    protocol = "tcp"
+    ports    = ["31500"]
+  }
+  # test site
+  allow {
+    protocol = "tcp"
+    ports    = ["80"]
   }
 }
 ## ---------------------------------------------------
@@ -207,6 +217,7 @@ resource "local_file" "ansibleInventory" {
            provisionerSource=terraform
            computeEnvironment=${var.computeEnvironment}
            computeProductKey=${var.computeInstanceKey}
+           computeInstall=1
            
            [${var.computeInstanceKey}]
            # members of the '${var.computeInstanceKey}' group

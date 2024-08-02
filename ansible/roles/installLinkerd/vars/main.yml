@@ -1,0 +1,26 @@
+#
+#
+#BOF
+---
+#######################################################################################################################
+# 
+#######################################################################################################################
+userHomeDirRegex: ^HOME=\'([\w|\/]+)\'
+#
+installUrl: https://run.linkerd.io/install
+installDir: .linkerd2/bin
+installCheckString: linkerd-config already exists
+#
+linkerdVizKubeCreateNamespace: linkerd-viz
+linkerdVizKubeCreateKind: Deployment
+linkerdVizKubeCreateName: web
+linkerdVizKubeWebDepoymentFile: patch-linkerd-viz-web-ds.yml
+#
+linkerdVizKubeServiceKind: Service
+linkerdVizKubeServiceName: web
+linkerdVizKubeServiceType: NodePort
+linkerdVizKubeServicePort: 31500
+linkerdVizKubeServiceFile: patch-linkerd-viz-web-svc.yml
+#
+...
+#EOF

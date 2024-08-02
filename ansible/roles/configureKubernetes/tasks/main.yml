@@ -49,7 +49,7 @@
   when:
     - taskResponse.rc == 0
 # 
-- name: Set Kubernetes node label
+- name: Set Kubernetes node label(system)
   ansible.builtin.command:
   
     #cmd: " kubectl label node $HOSTNAME system=secondOne"
@@ -167,9 +167,57 @@
   #
   when:
     - taskResponse.rc != 0
-
-
-
+#######################################################################################################################
+# LAB 12.1: Assign Pods Using Labels
+#######################################################################################################################
+- name: Get a list of kubernetes worker nodes
+  ansible.builtin.shell:
+    # NOTE: A folding block operator joins multiple lines together by spaces
+    cmd: >
+      kubectl get nodes 
+      | grep -v 'control-plane' 
+      | grep -Eo '^([^ ]+)'
+  #
+  register: workerNodes
+#
+- name: Set Kubernetes node label(status)
+  ansible.builtin.command:
+    cmd: "kubectl label node {{ item }} status=other --overwrite=true"
+  #
+  with_items: "{{ workerNodes.stdout_lines | reverse | list | first }}"
+  when:
+    - workerNodes.rc == 0
+#
+- name: Get a list of kubernetes control-plane nodes
+  ansible.builtin.shell:
+    # NOTE: A folding block operator joins multiple lines together by spaces
+    cmd: >
+      kubectl get nodes 
+      | grep 'control-plane' 
+      | grep -Eo '^([^ ]+)'
+  #
+  register: controlPlanNodes
+#
+- name: Set Kubernetes node label(status)
+  ansible.builtin.command:
+    cmd: "kubectl label node {{ item }} status=vip --overwrite=true"
+  #
+  with_items: "{{ controlPlanNodes.stdout_lines | first }}"
+  when:
+    - controlPlanNodes.rc == 0
+#
+- name: Get Kubernetes node labels
+  ansible.builtin.command:
+    cmd: "kubectl get nodes --show-labels"
+  #
+  register: taskResponse
+#
+- name: Log Kubernetes node labels
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#######################################################################################################################
+# 
+#######################################################################################################################
 
 #
 ...

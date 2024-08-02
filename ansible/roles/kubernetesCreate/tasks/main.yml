@@ -3,7 +3,26 @@
 #BOF
 ---
 #######################################################################################################################
-# Lab 3 nginx
+# Shared setup
+#######################################################################################################################
+#
+- name: Retrieve non-root user environment 
+  ansible.builtin.shell:
+    cmd: set
+  #
+  register: taskResponse
+  no_log: true
+#
+- name: Setup home dir variable
+  ansible.builtin.set_fact:
+    userHomeDir:  "{{ item | regex_search( userHomeDirRegex, '\\1' ) | first | string }}"
+  #
+  with_items: "{{ taskResponse.stdout_lines }}"
+  when: 
+    - item | regex_search( '^HOME=' ) 
+  no_log: true
+#######################################################################################################################
+# LAB 3: nginx
 #######################################################################################################################
 - name: Kubernetes Create[{{ nginx_kubeCreateName }}]
   ansible.builtin.include_tasks:
@@ -236,7 +255,7 @@
 - name: Get expose NodePort {{ nginxOne_kubeCreateName }}
   ansible.builtin.command:
     cmd: 
-      kubectl -n accounting get service {{ nginxOne_kubeCreateNodePortName }}
+      kubectl -n {{ nginxOne_kubeCreateNamespace }} get service {{ nginxOne_kubeCreateNodePortName }}
   #
   register: taskResponse
   ignore_errors: true
@@ -244,10 +263,36 @@
 - name: Create expose NodePort service {{ nginxOne_kubeCreateName }}
   ansible.builtin.command:
     cmd:
-      kubectl -n accounting expose deployment {{ nginxOne_kubeCreateName }} --type=NodePort --name={{ nginxOne_kubeCreateNodePortName }}
+      kubectl -n {{ nginxOne_kubeCreateNamespace }} expose {{ nginxOne_kubeCreateKind }} {{ nginxOne_kubeCreateName }} --type=NodePort --name={{ nginxOne_kubeCreateNodePortName }}
   #
   when:
     -  taskResponse.rc != 0
+#######################################################################################################################
+# LAB 11.1: Service Mesh
+#######################################################################################################################
+#
+- name: linkerd inject [{{ nginxOne_kubeCreateName }}]
+  ansible.builtin.shell:
+    cmd: 
+      kubectl --namespace {{ nginxOne_kubeCreateNamespace }} get {{ nginxOne_kubeCreateKind }} {{ nginxOne_kubeCreateName }} -o yaml | {{ '%s/%s/linkerd' | format ( userHomeDir, linkerdDir ) }} inject - | kubectl apply -f -
+  #
+  register: taskResponse
+#
+- name: Log linkerd inject [{{ nginxOne_kubeCreateName }}]
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+#
+- name: Scale deployment [{{ nginxOne_kubeCreateName }}]
+  ansible.builtin.shell:
+    cmd: 
+      kubectl --namespace {{ nginxOne_kubeCreateNamespace }} scale {{ nginxOne_kubeCreateKind }} {{ nginxOne_kubeCreateName }} --replicas=5
+  #
+  register: taskResponse
+#
+- name: Log scale deployment [{{ nginxOne_kubeCreateName }}]
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
 #######################################################################################################################
 # 
 #######################################################################################################################
@@ -278,5 +323,211 @@
     cmd: 
       kubectl exec -it {{ nettool_kubeCreateName }} -- apt-get install -y {{ item }}
   with_items: "{{ nettool_kubeCreatePackages }}"
+#######################################################################################################################
+# LAB 11.2: Ingress Controller
+#######################################################################################################################
+- name: "Kubernetes Create [{{ webOne_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ webOne_kubeCreateName }}"
+        - appKubeCreateKind: "{{ webOne_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ webOne_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( webOne_kubeCreateName ) }}"
+        - appKubeCreateContainerPort: "{{ webOne_kubeCreateContainerPort }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: true
+#
+- name: "Kubernetes Create [{{ webOne_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ webTwo_kubeCreateName }}"
+        - appKubeCreateKind: "{{ webTwo_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ webTwo_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( webTwo_kubeCreateName ) }}"
+        - appKubeCreateContainerPort: "{{ webTwo_kubeCreateContainerPort }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: true
+#
+- name: "Kubernetes Create [{{ ingress_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ ingress_kubeCreateName }}"
+        - appKubeCreateKind: "{{ ingress_kubeCreateKind }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( ingress_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: false
+#
+- name: Get ingress
+  ansible.builtin.shell:
+    cmd: 
+      kubectl get ingress --all-namespaces
+  #
+  register: taskResponse
+#
+- name: Log ingress 
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#
+- name: Linkerd Inject ingress[{{ ingress_kubeCreateName }}]
+  ansible.builtin.shell:
+    cmd: 
+      kubectl get daemonset {{ ingress_kubeInjectControllerName }} -o yaml | {{ '%s/%s/linkerd' | format ( userHomeDir, linkerdDir ) }} inject --ingress - | kubectl apply -f -
+  #
+  register: taskResponse
+#
+- name: Log linkerd Inject ingress[{{ ingress_kubeCreateName }}]
+  ansible.builtin.debug: 
+    var: taskResponse.stdout_lines
+#######################################################################################################################
+# LAB 12.1: Assign Pods Using Labels
+#######################################################################################################################
+- name: "Kubernetes Create [{{ vip_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ vip_kubeCreateName }}"
+        - appKubeCreateKind: "{{ vip_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ vip_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( vip_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: true
+        - appKubeCreateNode: "{{ vip_kubeCreateNode }}"
+#
+- name: "Kubernetes Create [{{ oth_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ oth_kubeCreateName }}"
+        - appKubeCreateKind: "{{ oth_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ oth_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( oth_kubeCreateName ) }}"
+        - appKubeCreateExpose: false
+        - appKubeCreateVarsCheck: true
+        - appKubeCreateNode: "{{ oth_kubeCreateNode }}"
+#
+- name: "Kubernetes Create [{{ taintD_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ taintD_kubeCreateName }}"
+        - appKubeCreateKind: "{{ taintD_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ taintD_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( taintD_kubeCreateName ) }}"
+#
+# kubectl delete deployment {{ taintD_kubeCreateName }}
+#
+# kubectl taint nodes k8s01 bubba=value:PreferNoSchedule
+# kubectl describe node | grep Taint
+# kubectl apply -f {{ 'create-%s.yml' | format( taintD_kubeCreateName ) }}
+# kubectl delete deployment {{ taintD_kubeCreateName }}
+# kubectl taint nodes k8s01 bubba-
+#
+# kubectl taint nodes k8s01 bubba=value:NoSchedule
+# kubectl describe node | grep Taint
+# kubectl apply -f {{ 'create-%s.yml' | format( taintD_kubeCreateName ) }}
+# kubectl delete deployment {{ taintD_kubeCreateName }}
+# kubectl taint nodes k8s01 bubba-
+#
+# kubectl taint nodes k8s01 bubba=value:NoExecute
+# kubectl describe node | grep Taint
+# kubectl apply -f {{ 'create-%s.yml' | format( taintD_kubeCreateName ) }}
+# kubectl delete deployment {{ taintD_kubeCreateName }}
+# kubectl taint nodes k8s01 bubba-
+#######################################################################################################################
+# Logging and Troubleshooting
+#######################################################################################################################
+# kubectl create deploy busybox --image=busybox --command sleep 3600
+# kubectl exec -ti <busybox_pod> -- /bin/sh
+# kubectl debug buggypod --image debian --attach
+# systemctl status kubelet.service
+#######################################################################################################################
+# LAB 13.1: Review Log File Locations
+#######################################################################################################################
+# journalctl -u kubelet | less
+
+#######################################################################################################################
+# LAB 13.2:  Viewing Logs Output
+#######################################################################################################################
+#
+
+#######################################################################################################################
+# LAB 13.3: Adding Tools for Monitoring and Metrics
+#######################################################################################################################
+# git clone https://github.com/kubernetes-incubator/metrics-server.git
+
+#######################################################################################################################
+# LAB 14.1: Working with Transport Layer Security (TLS)
+#######################################################################################################################
+#
+
+#######################################################################################################################
+# LAB 15.1: Working with Transport Layer Security (TLS)
+#######################################################################################################################
+#
+
+#######################################################################################################################
+# LAB 15.2: Authentication and Authorization
+#######################################################################################################################
+#
+#kubectl create ns development
+#kubectl create ns production
+#kubectl config get-contexts
+
+#sudo useradd -s /bin/bash DevDan
+#sudo passwd DevDan
+
+#openssl genrsa -out DevDan.key 2048
+#touch $HOME/.rnd
+#openssl req -new -key DevDan.key -out DevDan.csr -subj "/CN=DevDan/O=development"
+#sudo openssl x509 -req -in DevDan.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out DevDan.crt -days 45
+#kubectl config set-credentials DevDan --client-certificate=/home/DevDan/DevDan.crt --client-key=/home/DevDan/DevDan.key
+#diff cluster-api-config .kube/config
+
+#kubectl config set-context DevDan-context --cluster=kubernetes --namespace=development --user=DevDan
+#kubectl --context=DevDan-context get pods
+#kubectl config get-contexts
+#diff cluster-api-config .kube/config
+
+#kubectl create -f role-dev.yml
+#kubectl create -f role-dev-bind.yml
+
+#kubectl --context=DevDan-context get pods
+
+#kubectl --context=DevDan-context create deployment  nginx --image=nginx
+#kubectl --context=DevDan-context get pods
+#kubectl --context=DevDan-context delete deploy nginx
+
+#kubectl create -f role-prod.yml
+#kubectl create -f role-prod-bind.yml
+
+#kubectl config set-context ProdDan-context --cluster=kubernetes --namespace=production --user=DevDan
+#kubectl --context=ProdDan-context get pods
+#kubectl config get-contexts
+#diff cluster-api-config .kube/config
+
+#kubectl --context=ProdDan-context create deployment nginx --image=nginx
+#kubectl -n production describe role dev-prod
+
+
+#######################################################################################################################
+# LAB 15.3: Admission Controllers
+#######################################################################################################################
+#
+
+#######################################################################################################################
+# 16.1: High Availability Steps
+#######################################################################################################################
+#
+
+#
 ...
 #EOF

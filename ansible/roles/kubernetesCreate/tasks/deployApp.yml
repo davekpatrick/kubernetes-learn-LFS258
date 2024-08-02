@@ -24,6 +24,15 @@
   when:
     - kubeCreateCheck.rc == 1
 #
+- name: Update kubernetes object
+  ansible.builtin.command:
+    cmd: "kubectl --namespace {{ appKubeCreateNamespace  | default('default') | string }} patch {{ appKubeCreateKind }} {{ appKubeCreateName }} --type=merge --patch-file={{ appKubeCreateConfigFileName }}"
+  #
+  register: taskResponse
+  when:
+    - kubeCreateCheck.rc == 0
+    - appKubeCreateKind != 'Pod'
+#
 - name: Log kubernetes create
   ansible.builtin.debug: 
     var: taskResponse
@@ -89,6 +98,7 @@
   when:
     - appKubeCreateKind != 'cronjobs.batch'
     - appKubeCreateKind != 'jobs.batch'
+    - appKubeCreateKind != 'Ingress'
 #
 - name: Define kubernetes pod variables
   ansible.builtin.set_fact:
@@ -96,6 +106,7 @@
   when:
     - appKubeCreateKind != 'cronjobs.batch'
     - appKubeCreateKind != 'jobs.batch'
+    - appKubeCreateKind != 'Ingress'
 #
 - name: Log kubernetes pod name
   ansible.builtin.debug: 
@@ -116,6 +127,7 @@
     - appKubeCreateVarsCheck | default(false) | bool == true
     - appKubeCreateKind != 'cronjobs.batch'
     - appKubeCreateKind != 'jobs.batch'
+    - appKubeCreateKind != 'Ingress'
 #
 - name: Log kubernetes pod environment variable
   ansible.builtin.debug: 
@@ -125,6 +137,7 @@
     - appKubeCreateVarsCheck | default(false) | bool == true
     - appKubeCreateKind != 'cronjobs.batch'
     - appKubeCreateKind != 'jobs.batch'
+    - appKubeCreateKind != 'Ingress'
 #
 ...
 #EOF

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: {{ linkerdVizKubeServiceKind }}
+spec:
+  ports:
+  - name: http
+    nodePort: {{ linkerdVizKubeServicePort }}
+    port: 8084
+    protocol: TCP
+    targetPort: 8084
+  type: {{ linkerdVizKubeServiceType }}
