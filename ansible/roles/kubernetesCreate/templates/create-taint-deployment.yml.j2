@@ -1,0 +1,21 @@
+#BOF
+apiVersion: apps/v1
+kind: {{ appKubeCreateKind }}
+metadata:
+  name: {{ appKubeCreateName }}
+spec:
+  replicas: {{ taintD_kubeCreateReplicas }}
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name:  nginx
+        image: {{ appKubeCreateImage }}
+        ports:
+        - containerPort: {{ taintD_kubeCreateContainerPort }}
+#EOF

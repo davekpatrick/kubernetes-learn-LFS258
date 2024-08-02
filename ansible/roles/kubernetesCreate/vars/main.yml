@@ -134,6 +134,19 @@ oth_kubeCreateName: other
 oth_kubeCreateKind: Pod
 oth_kubeCreateImage: busybox:latest
 oth_kubeCreateNode: other
+#######################################################################################################################
+# LAB 12.2: Using Taints to Control Pod Deployment
+#######################################################################################################################
+taintD_kubeCreateName: taint-deployment
+taintD_kubeCreateKind: Deployment
+taintD_kubeCreateImage: nginx:1.20.1
+taintD_kubeCreateReplicas: 8
+taintD_kubeCreateContainerPort: 80
+
+
+#######################################################################################################################
+# 
+#######################################################################################################################
 #
 ...
 #EOF

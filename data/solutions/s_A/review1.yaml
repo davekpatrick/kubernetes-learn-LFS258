@@ -1,9 +1,10 @@
+#BOF
 apiVersion: v1
 kind: Pod
 metadata:
   name: break1
 spec:
   containers:
-  - name: mountain-region
-    image: nginx:1.11-apline
-
+  - name: nginx
+    image: nginx:1.11-alpine
+#EOF

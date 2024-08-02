@@ -1,4 +1,4 @@
-#EOF
+#BOF
 apiVersion: v1
 kind: {{ appKubeCreateKind }}
 metadata:
@@ -6,22 +6,22 @@ metadata:
 spec:
   containers:
   - name: {{ appKubeCreateName }}1
-    image: busybox
+    image: {{ appKubeCreateImage }}
     args:
     - sleep
     - "1000000"
   - name: {{ appKubeCreateName }}2
-    image: busybox
+    image: {{ appKubeCreateImage }}
     args:
     - sleep
     - "1000000"
   - name: {{ appKubeCreateName }}3
-    image: busybox
+    image: {{ appKubeCreateImage }}
     args:
     - sleep
     - "1000000"
   - name: {{ appKubeCreateName }}4
-    image: busybox
+    image: {{ appKubeCreateImage }}
     args:
     - sleep
     - "1000000"

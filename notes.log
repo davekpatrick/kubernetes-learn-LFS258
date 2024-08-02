@@ -1,0 +1,106 @@
+#
+resource "google_dns_record_set" "SOA" {
+  count = local.computeInstances
+  #
+  name = resource.google_dns_managed_zone.dnsZone.dns_name
+  type = "SOA"
+  ttl  = 21600
+  #
+  managed_zone = resource.google_dns_managed_zone.dnsZone.name
+  #
+  rrdatas = [ "ns-cloud-a1.googledomains.com. cloud-dns-hostmaster.google.com. 1 21600 3600 259200 300" ]
+}
+
+#
+resource "google_dns_record_set" "NS" {
+  count = local.computeInstances
+  #
+  name = resource.google_dns_managed_zone.dnsZone.dns_name
+  type = "NS"
+  ttl  = 21600
+  #
+  managed_zone = resource.google_dns_managed_zone.dnsZone.name
+  #
+  rrdatas = [ "ns-cloud-a1.googledomains.com.", 
+              "ns-cloud-a2.googledomains.com.",
+              "ns-cloud-a3.googledomains.com.",
+              "ns-cloud-a4.googledomains.com."
+            ]
+}
+
+
+
+PATCH https://dns.googleapis.com/dns/v1beta2/projects/dkp-sandbox/managedZones/sandbox/rrsets/sandbox.davekpatrick.dev./SOA
+
+  {
+    "rrdatas": [
+      "ns-cloud-a1.googledomains.com. cloud-dns-hostmaster.google.com. 1 21600 3600 259200 300"
+    ]
+  }
+
+
+## ---------------------------------------------------
+## 
+## ---------------------------------------------------
+resource "local_file" "dnsZoneCfg" {
+  # creation dependancy
+  depends_on = [google_dns_managed_zone.dnsZone]
+  #
+  content = <<-EOD
+           #BOF
+           gcloud auth activate-service-account --key-file auth.json
+           gcloud dns record-sets update sandbox.davekpatrick.dev. --type="SOA" --ttl="21600" --zone="sandbox" --rrdatas="ns-cloud-d1.googledomains.com. cloud-dns-hostmaster.google.com. 1 21600 3600 259200 300"
+           gcloud dns record-sets update sandbox.davekpatrick.dev. --type="NS" --ttl="21600" --zone="sandbox" --rrdatas="ns-cloud-d1.googledomains.com.,ns-cloud-d2.googledomains.com.,ns-cloud-d3.googledomains.com.,ns-cloud-d4.googledomains.com."
+           #EOF
+          EOD
+  #
+  filename        = "dnsZoneCfg.sh"
+  file_permission = "0774"
+  #
+  provisioner "local-exec" {
+    command = "./dnsZoneCfg.sh"
+  }
+}
+
+#
+curl --cert /etc/kubernetes/pki/sa.pub --key /etc/kubernetes/pki/sa.key --cacert /etc/kubernetes/pki/ca.crt https://k8scp:6443/api/v1/pods 
+
+curl --cert /tmp/client.pem --key /tmp/client-key.pem \ 
+--cacert /tmp/ca.pem -v -XGET \ 
+ https://10.128.0.3:6443/api/v1/namespaces/default/pods/firstpod/log
+
+
+export client=$(grep client-cert $HOME/.kube/config |cut -d" " -f 6)
+export key=$(grep client-key-data $HOME/.kube/config |cut -d " " -f 6)
+export auth=$(grep certificate-authority-data $HOME/.kube/config |cut -d " " -f 6)
+echo $client | base64 -d - > ./client.pem
+echo $key | base64 -d - > ./client-key.pem
+echo $auth | base64 -d - > ./ca.pem
+
+curl --cert ./client.pem \
+--key ./client-key.pem --cacert ./ca.pem \
+https://k8scp:6443/api/v1/namespaces/default/pods \
+-XPOST -H'Content-Type: application/json' \
+-d@curlpod.json
+
+
+#
+# kubectl create deployment nginx --image=nginx
+# kubectl get deployments
+# kubectl describe deployment nginx
+# kubectl get events
+# kubectl get deployments nginx -o yaml > first.yaml
+# kubectl delete deployment nginx
+# kubectl create -f first.yaml
+# kubectl get deployments nginx -o yaml > second.yaml
+# kubectl create deployment two --image=nginx --dry-run=client -o yaml
+# kubectl get deployment
+# kubectl get deployments nginx -o yaml
+# kubectl get deployments nginx -o json
+
+#kubectl scale deployment nginx --replicas=0
+#kubectl scale deployment nginx --replicas=2
+
+# kubectl create deployment test1 --image=httpd
+# kubectl create deployment test2 --image=httpd --v=10
+# kubectl get deployment, replicaset, pod

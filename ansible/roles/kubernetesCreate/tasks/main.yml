@@ -412,14 +412,121 @@
         - appKubeCreateExpose: false
         - appKubeCreateVarsCheck: true
         - appKubeCreateNode: "{{ oth_kubeCreateNode }}"
+#
+- name: "Kubernetes Create [{{ taintD_kubeCreateName }}]"
+  ansible.builtin.include_tasks:
+    file: deployApp.yml
+    apply:
+      vars:
+        - appKubeCreateName: "{{ taintD_kubeCreateName }}"
+        - appKubeCreateKind: "{{ taintD_kubeCreateKind }}"
+        - appKubeCreateImage: "{{ taintD_kubeCreateImage }}"
+        - appKubeCreateConfigFileName: "{{ 'create-%s.yml' | format( taintD_kubeCreateName ) }}"
+#
+# kubectl delete deployment {{ taintD_kubeCreateName }}
+#
+# kubectl taint nodes k8s01 bubba=value:PreferNoSchedule
+# kubectl describe node | grep Taint
+# kubectl apply -f {{ 'create-%s.yml' | format( taintD_kubeCreateName ) }}
+# kubectl delete deployment {{ taintD_kubeCreateName }}
+# kubectl taint nodes k8s01 bubba-
+#
+# kubectl taint nodes k8s01 bubba=value:NoSchedule
+# kubectl describe node | grep Taint
+# kubectl apply -f {{ 'create-%s.yml' | format( taintD_kubeCreateName ) }}
+# kubectl delete deployment {{ taintD_kubeCreateName }}
+# kubectl taint nodes k8s01 bubba-
+#
+# kubectl taint nodes k8s01 bubba=value:NoExecute
+# kubectl describe node | grep Taint
+# kubectl apply -f {{ 'create-%s.yml' | format( taintD_kubeCreateName ) }}
+# kubectl delete deployment {{ taintD_kubeCreateName }}
+# kubectl taint nodes k8s01 bubba-
 #######################################################################################################################
-# LAB 12.2: Using Taints to Control Pod Deployment
+# Logging and Troubleshooting
 #######################################################################################################################
+# kubectl create deploy busybox --image=busybox --command sleep 3600
+# kubectl exec -ti <busybox_pod> -- /bin/sh
+# kubectl debug buggypod --image debian --attach
+# systemctl status kubelet.service
+#######################################################################################################################
+# LAB 13.1: Review Log File Locations
+#######################################################################################################################
+# journalctl -u kubelet | less
+
+#######################################################################################################################
+# LAB 13.2:  Viewing Logs Output
+#######################################################################################################################
+#
+
+#######################################################################################################################
+# LAB 13.3: Adding Tools for Monitoring and Metrics
+#######################################################################################################################
+# git clone https://github.com/kubernetes-incubator/metrics-server.git
+
+#######################################################################################################################
+# LAB 14.1: Working with Transport Layer Security (TLS)
+#######################################################################################################################
+#
+
+#######################################################################################################################
+# LAB 15.1: Working with Transport Layer Security (TLS)
+#######################################################################################################################
+#
+
+#######################################################################################################################
+# LAB 15.2: Authentication and Authorization
+#######################################################################################################################
+#
+#kubectl create ns development
+#kubectl create ns production
+#kubectl config get-contexts
+
+#sudo useradd -s /bin/bash DevDan
+#sudo passwd DevDan
+
+#openssl genrsa -out DevDan.key 2048
+#touch $HOME/.rnd
+#openssl req -new -key DevDan.key -out DevDan.csr -subj "/CN=DevDan/O=development"
+#sudo openssl x509 -req -in DevDan.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out DevDan.crt -days 45
+#kubectl config set-credentials DevDan --client-certificate=/home/DevDan/DevDan.crt --client-key=/home/DevDan/DevDan.key
+#diff cluster-api-config .kube/config
+
+#kubectl config set-context DevDan-context --cluster=kubernetes --namespace=development --user=DevDan
+#kubectl --context=DevDan-context get pods
+#kubectl config get-contexts
+#diff cluster-api-config .kube/config
+
+#kubectl create -f role-dev.yml
+#kubectl create -f role-dev-bind.yml
+
+#kubectl --context=DevDan-context get pods
+
+#kubectl --context=DevDan-context create deployment  nginx --image=nginx
+#kubectl --context=DevDan-context get pods
+#kubectl --context=DevDan-context delete deploy nginx
+
+#kubectl create -f role-prod.yml
+#kubectl create -f role-prod-bind.yml
+
+#kubectl config set-context ProdDan-context --cluster=kubernetes --namespace=production --user=DevDan
+#kubectl --context=ProdDan-context get pods
+#kubectl config get-contexts
+#diff cluster-api-config .kube/config
+
+#kubectl --context=ProdDan-context create deployment nginx --image=nginx
+#kubectl -n production describe role dev-prod
 
 
 #######################################################################################################################
-# 
+# LAB 15.3: Admission Controllers
 #######################################################################################################################
+#
+
+#######################################################################################################################
+# 16.1: High Availability Steps
+#######################################################################################################################
+#
 
 #
 ...
